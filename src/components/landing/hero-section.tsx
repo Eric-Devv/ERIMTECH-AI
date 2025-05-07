@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Zap, Brain, Code, ImageIcon } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const slides = [
@@ -42,11 +42,34 @@ const slides = [
   }
 ];
 
+interface AnimatedElementStyle {
+  width: string;
+  height: string;
+  top: string;
+  left: string;
+  animationDelay: string;
+  animationDuration: string;
+  opacity: number;
+}
+
 export function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [animatedElementStyles, setAnimatedElementStyles] = useState<AnimatedElementStyle[]>([]);
 
   useEffect(() => {
+    // Generate styles only on the client
+    const styles = Array(5).fill(null).map(() => ({
+      width: `${Math.random() * 150 + 50}px`,
+      height: `${Math.random() * 150 + 50}px`,
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
+      animationDelay: `${Math.random() * 5}s`,
+      animationDuration: `${Math.random() * 5 + 5}s`,
+      opacity: Math.random() * 0.3 + 0.1,
+    }));
+    setAnimatedElementStyles(styles);
+
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000); // Change slide every 5 seconds
@@ -80,19 +103,11 @@ export function HeroSection() {
       
       {/* Animated background elements */}
       <div className="absolute inset-0 z-0 overflow-hidden">
-        {[...Array(5)].map((_, i) => (
+        {animatedElementStyles.map((style, i) => (
           <div
             key={i}
             className="absolute bg-primary/10 rounded-full animate-pulse"
-            style={{
-              width: `${Math.random() * 150 + 50}px`,
-              height: `${Math.random() * 150 + 50}px`,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${Math.random() * 5 + 5}s`,
-              opacity: Math.random() * 0.3 + 0.1,
-            }}
+            style={style}
           />
         ))}
       </div>
@@ -136,7 +151,7 @@ export function HeroSection() {
                   width={600} 
                   height={400} 
                   className="absolute inset-0 w-full h-full object-cover opacity-20" 
-                  data-ai-hint={slide.imgAlt}
+                  data-ai-hint={slide.imgAlt.toLowerCase().replace(' ', '')}
                 />
                 <div className="relative z-10 text-center">
                   <div className="p-3 bg-background/70 rounded-full inline-block mb-3 md:mb-4 shadow-md">
@@ -166,3 +181,4 @@ export function HeroSection() {
     </section>
   );
 }
+
