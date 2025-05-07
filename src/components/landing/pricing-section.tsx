@@ -13,9 +13,9 @@ const pricingPlans = [
     period: "",
     description: "Begin your journey into the future of AI. Perfect for individuals.",
     features: [
-      "5 Free Prompts/Day",
+      "Limited Daily Prompts",
       "Basic AI Chat",
-      "Limited File Support",
+      "Standard File Support",
       "Community Access",
     ],
     cta: "Start Exploring",
@@ -28,13 +28,13 @@ const pricingPlans = [
     period: "/month",
     description: "Unlock more power and features. Ideal for professionals and small teams.",
     features: [
-      "200 Prompts/Day",
+      "Increased Daily Prompts",
       "Advanced AI Chat",
       "Full File Support (Images, Audio)",
       "Code Generation & Explanation",
       "Priority Support",
     ],
-    cta: "Become an Innovator",
+    cta: "Choose Innovator",
     href: "/signup?plan=innovator",
     popular: true,
   },
@@ -44,14 +44,14 @@ const pricingPlans = [
     period: "/month",
     description: "For pioneers pushing the boundaries. Full access to all capabilities.",
     features: [
-      "Unlimited Prompts",
+      "High-Volume Prompts",
       "All Innovator Features",
       "Video Summarization",
       "Developer API Access",
       "Early Access to New Features",
-      "Dedicated Support Channel",
+      "Dedicated Support",
     ],
-    cta: "Join the Visionaries",
+    cta: "Become a Visionary",
     href: "/signup?plan=visionary",
     popular: false,
   },
@@ -70,7 +70,7 @@ export function PricingSection() {
             cards.forEach((card, index) => {
               setTimeout(() => {
                 card.classList.add('scroll-animation-visible');
-              }, index * 100);
+              }, index * 50);
             });
           }
         });
@@ -90,44 +90,43 @@ export function PricingSection() {
   }, []);
   
   return (
-    <section id="pricing" ref={sectionRef} className="w-full py-8 md:py-10 bg-background scroll-animation">
+    <section id="pricing" ref={sectionRef} className="w-full py-12 md:py-16 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-3 text-center mb-8">
-          <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Access Tiers</div>
-          <h2 className="text-3xl font-orbitron font-bold tracking-tighter sm:text-5xl">Choose Your Path to the Future</h2>
-          <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-            Flexible plans designed to scale with your ambitions. Start for free or unlock advanced capabilities.
+        <div className="flex flex-col items-center justify-center space-y-3 text-center mb-8 md:mb-10">
+          <h2 className="text-3xl font-orbitron font-bold tracking-tighter sm:text-4xl">Simple, Transparent Pricing</h2>
+          <p className="max-w-[700px] text-muted-foreground md:text-lg">
+            Choose the plan that’s right for you. Start for free or unlock advanced capabilities.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 items-stretch">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 items-stretch">
           {pricingPlans.map((plan, index) => (
-            <Card key={index} className={`flex flex-col glassmorphic pricing-card scroll-animation hover:shadow-primary/25 transition-shadow duration-300 ${plan.popular ? 'border-2 border-primary shadow-primary/20' : ''}`}>
+            <Card key={index} className={`flex flex-col glassmorphic pricing-card scroll-animation hover:shadow-primary/15 transition-shadow duration-300 ${plan.popular ? 'border-2 border-primary shadow-primary/10' : 'border-border'}`}>
               {plan.popular && (
-                <div className="absolute -top-3 -right-3 bg-primary text-primary-foreground px-3 py-1 text-xs font-semibold rounded-full shadow-lg flex items-center">
+                <div className="absolute -top-3 right-4 bg-primary text-primary-foreground px-3 py-0.5 text-xs font-semibold rounded-full shadow-md flex items-center">
                   <Zap className="h-3 w-3 mr-1" /> Popular
                 </div>
               )}
-              <CardHeader className="pb-4">
-                <CardTitle className="text-2xl font-orbitron">{plan.title}</CardTitle>
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold holographic-text !bg-clip-text !text-transparent">{plan.price}</span>
-                  {plan.period && <span className="text-muted-foreground ml-1">{plan.period}</span>}
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl font-orbitron">{plan.title}</CardTitle>
+                <div className="flex items-baseline pt-1">
+                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+                  {plan.period && <span className="text-sm text-muted-foreground ml-1">{plan.period}</span>}
                 </div>
-                <CardDescription className="pt-2 min-h-[60px]">{plan.description}</CardDescription>
+                <CardDescription className="pt-1 min-h-[40px] text-sm">{plan.description}</CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow">
-                <ul className="space-y-3">
+              <CardContent className="flex-grow py-3">
+                <ul className="space-y-2">
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center">
-                      <CheckCircle className="h-5 w-5 text-primary mr-2 shrink-0" />
+                    <li key={i} className="flex items-center text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-2 shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="pt-4">
                 <Link href={plan.href} className="w-full">
-                  <Button size="lg" className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+                  <Button size="lg" className="w-full text-base" variant={plan.popular ? 'default' : 'outline'}>
                     {plan.cta}
                   </Button>
                 </Link>
@@ -135,11 +134,10 @@ export function PricingSection() {
             </Card>
           ))}
         </div>
-         <p className="text-center text-muted-foreground mt-6 text-sm">
-            Need a custom solution for your enterprise? <Link href="/contact" className="text-primary hover:underline">Contact Sales</Link>.
+         <p className="text-center text-muted-foreground mt-8 text-sm">
+            Need a custom enterprise solution? <Link href="/contact" className="text-primary hover:underline font-medium">Contact Sales</Link>.
           </p>
       </div>
     </section>
   );
 }
-
