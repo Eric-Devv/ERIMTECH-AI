@@ -1,11 +1,10 @@
-
 "use client";
 import React, { useState, useEffect, useRef, FormEvent, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Mic, Bot, User, ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2, Copy, Settings2, Brain, Palette, Languages, Plus, Trash2, Edit2, CircleArrowLeft, Menu, SidebarClose, SidebarOpen, MessageSquare, X, GripVertical } from 'lucide-react';
+import { Paperclip, Send, Mic, Bot, User, ImageIcon, Film, Code, Link as LinkIconLucide, AlertTriangle, Sparkles, Loader2, Copy, Settings2, Brain, Palette, Languages, Plus, Trash2, Edit2, CircleArrowLeft, Menu, SidebarClose, SidebarOpen, MessageSquare, X, GripVertical } from 'lucide-react';
 import { generateAiChatResponse } from '@/ai/flows/generate-ai-chat-response';
 import { generateCodeExplanation } from '@/ai/flows/generate-code-explanation';
 import { summarizeVideo } from '@/ai/flows/summarize-video';
@@ -68,7 +67,7 @@ interface Message {
   text: string;
   sender: 'user' | 'ai';
   type?: 'text' | 'code' | 'image_analysis' | 'audio_transcription' | 'video_summary' | 'url_analysis' | 'error';
-  data?: any;
+  data?: any; // To store image URLs, code language, etc.
   timestamp: Date;
   feature?: AiFeature;
   isEditing?: boolean;
@@ -91,14 +90,14 @@ export interface Conversation {
   timestamp: Date;
 }
 
-export const featureConfig: Record<AiFeature, { icon: React.ElementType, name: string, placeholder: string, requiresFileUpload?: boolean, requiresUrl?: boolean, requiresCodeInput?: boolean, inputType?: 'text' | 'textarea' | 'url' | 'file', defaultLanguage?: string }> = {
+export const featureConfig: Record<AiFeature, { icon: React.ElementType, name: string, placeholder: string, requiresFileUpload?: boolean, requiresUrl?: boolean, requiresCodeInput?: boolean, inputType?: 'text' | 'textarea' | 'url' | 'file', defaultLanguage?: string, acceptedFileTypes?: string }> = {
   chat: { icon: Brain, name: "AI Chat", placeholder: "Message ERIMTECH AI...", inputType: 'textarea' },
   code_generation: { icon: Code, name: "Generate Code", placeholder: "Describe the code you want to generate...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'python' },
   code_explanation: { icon: Languages, name: "Explain Code", placeholder: "Paste code here to get an explanation...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'javascript' },
-  image_analysis: { icon: ImageIcon, name: "Analyze Image", placeholder: "Upload an image to analyze...", requiresFileUpload: true, inputType: 'file' },
-  audio_transcription: { icon: Mic, name: "Transcribe Audio", placeholder: "Upload an audio file to transcribe...", requiresFileUpload: true, inputType: 'file' },
+  image_analysis: { icon: ImageIcon, name: "Analyze Image", placeholder: "Upload an image to analyze...", requiresFileUpload: true, inputType: 'file', acceptedFileTypes: 'image/*' },
+  audio_transcription: { icon: Mic, name: "Transcribe Audio", placeholder: "Upload an audio file to transcribe...", requiresFileUpload: true, inputType: 'file', acceptedFileTypes: 'audio/*' },
   video_summarization: { icon: Film, name: "Summarize Video", placeholder: "Enter video URL to summarize...", requiresUrl: true, inputType: 'url' },
-  url_analysis: { icon: LinkIcon, name: "Analyze URL", placeholder: "Enter URL to analyze its content...", requiresUrl: true, inputType: 'url' },
+  url_analysis: { icon: LinkIconLucide, name: "Analyze URL", placeholder: "Enter URL to analyze its content...", requiresUrl: true, inputType: 'url' },
 };
 
 const ERIMTECH_LOGO_URL = "https://erimtechsolutions.co.ke/wp-content/uploads/2023/10/Erimlecita-logo-landscape-e1696571560902-1.png";
@@ -119,9 +118,10 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const micInputRef = useRef<HTMLInputElement>(null); // For voice input
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Default to open on desktop
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingConversationName, setEditingConversationName] = useState("");
 
@@ -134,7 +134,6 @@ export default function ChatPage() {
   const CurrentFeatureIcon = currentFeatureDetails.icon;
   
   useEffect(() => {
-    // Close sidebar by default on mobile
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setSidebarOpen(false);
     }
@@ -152,6 +151,7 @@ export default function ChatPage() {
     setCodeInput('');
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (micInputRef.current) micInputRef.current.value = "";
     if (currentFeatureDetails.defaultLanguage) {
       setCodeLanguage(currentFeatureDetails.defaultLanguage);
     }
@@ -170,7 +170,7 @@ export default function ChatPage() {
         return;
       }
       setFile(selectedFile);
-      addMessageToConversation(activeConversationId, `Uploaded ${selectedFile.name}`, 'user', 'text', undefined, currentFeature);
+      // User message will be added in handleSubmit
     }
   };
 
@@ -194,89 +194,110 @@ export default function ChatPage() {
       return lowerLang;
     }
     const aliases: Record<string, string> = {
-        'js': 'javascript',
-        'ts': 'typescript',
-        'py': 'python',
-        'jsx': 'javascript',
-        'tsx': 'typescript',
-        'html': 'xml',
-        'sh': 'bash',
+        'js': 'javascript', 'ts': 'typescript', 'py': 'python',
+        'jsx': 'javascript', 'tsx': 'typescript', 'html': 'xml', 'sh': 'bash',
     };
     return aliases[lowerLang] || 'plaintext';
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent, voiceInputText?: string) => {
+    if (e) e.preventDefault();
 
     if (!activeConversationId) {
         toast({ title: "No Active Conversation", description: "Please select or start a new conversation.", variant: "destructive"});
         return;
     }
     
-    let userMessageText = input;
-    if (currentFeatureDetails.requiresCodeInput) userMessageText = codeInput;
-    else if (currentFeatureDetails.requiresUrl) userMessageText = urlInput;
-    else if (currentFeatureDetails.requiresFileUpload && file) userMessageText = `Analyzing ${file.name}`;
+    let userMessageText = voiceInputText || input;
+    let userMessageData: any = {};
 
-    if (!userMessageText && !file) return;
+    if (!voiceInputText) { // If not from voice input, consider current feature inputs
+        if (currentFeatureDetails.requiresCodeInput) userMessageText = codeInput;
+        else if (currentFeatureDetails.requiresUrl) userMessageText = urlInput;
+        else if (currentFeatureDetails.requiresFileUpload && file) {
+          userMessageText = `Processing ${file.name}`;
+        }
+    }
+
+    if (!userMessageText && !file && !voiceInputText) return;
 
     setIsLoading(true);
-    if(userMessageText) addMessageToConversation(activeConversationId, userMessageText, 'user', 'text', undefined, currentFeature);
     
-    const currentInput = input;
-    const currentCode = codeInput;
-    const currentUrl = urlInput;
+    const currentInputVal = input;
+    const currentCodeVal = codeInput;
+    const currentUrlVal = urlInput;
+    const currentFileVal = file;
 
+    // Add user message
+    if (currentFeatureDetails.requiresFileUpload && currentFileVal && !voiceInputText) {
+      const dataUri = await readFileAsDataURL(currentFileVal);
+      userMessageData = {
+        fileType: currentFeature === 'image_analysis' ? 'image' : 'audio',
+        dataUri: dataUri,
+        fileName: currentFileVal.name,
+      };
+      addMessageToConversation(activeConversationId, `Uploaded ${currentFileVal.name}`, 'user', 'text', userMessageData, currentFeature);
+    } else if (userMessageText) {
+       addMessageToConversation(activeConversationId, userMessageText, 'user', 'text', undefined, currentFeature);
+    }
+    
     setInput(''); 
     setCodeInput('');
     setUrlInput('');
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = ""; 
     
     try {
       let aiResponse: any;
       let responseType: Message['type'] = 'text';
       let responseData: any = {};
 
+      const promptForAi = voiceInputText || currentInputVal;
+
       switch (currentFeature) {
         case 'chat':
-          aiResponse = await generateAiChatResponse({ prompt: currentInput, url: currentUrl || undefined });
+          aiResponse = await generateAiChatResponse({ prompt: promptForAi, url: currentUrlVal || undefined });
           addMessageToConversation(activeConversationId, aiResponse.response, 'ai', 'text', undefined, 'chat');
           break;
         case 'code_generation':
-          const generationPrompt = `Generate ${codeLanguage} code for: ${currentCode}. ${currentInput ? `Additional instructions: ${currentInput}` : ''}`;
-          aiResponse = await generateAiChatResponse({ prompt: `Please generate a ${codeLanguage} code snippet that does the following: ${currentCode}. ${currentInput ? `More details: ${currentInput}` : ''}. Output only the code block in markdown format.` });
+          const codeGenPrompt = `Generate ${codeLanguage} code for the following task: "${voiceInputText || currentCodeVal}". ${currentInputVal && !voiceInputText ? `Additional details: "${currentInputVal}"` : ''}. Output only the code block in markdown format.`;
+          aiResponse = await generateAiChatResponse({ prompt: codeGenPrompt });
           responseType = 'code'; 
           responseData = { language: codeLanguage, code: aiResponse.response }; 
           addMessageToConversation(activeConversationId, aiResponse.response, 'ai', responseType, responseData, 'code_generation');
           break;
         case 'code_explanation':
-          aiResponse = await generateCodeExplanation({ code: currentCode, language: codeLanguage }); 
+          const codeToExplain = voiceInputText || currentCodeVal;
+          aiResponse = await generateCodeExplanation({ code: codeToExplain, language: codeLanguage }); 
           responseType = 'text'; 
-          addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, { language: codeLanguage, originalCode: currentCode }, 'code_explanation');
+          addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, { language: codeLanguage, originalCode: codeToExplain }, 'code_explanation');
           break;
         case 'image_analysis':
-          if (!file) throw new Error("No image file provided for analysis.");
-          const imageDataUri = await readFileAsDataURL(file);
+          if (!currentFileVal) throw new Error("No image file provided for analysis.");
+          const imageDataUri = userMessageData.dataUri || await readFileAsDataURL(currentFileVal);
           aiResponse = await analyzeImage({ photoDataUri: imageDataUri });
           responseType = 'image_analysis';
           responseData = { imageUrl: imageDataUri, description: aiResponse.analysisResult.description };
           addMessageToConversation(activeConversationId, aiResponse.analysisResult.description, 'ai', responseType, responseData, 'image_analysis');
           break;
         case 'audio_transcription':
-          if (!file) throw new Error("No audio file provided for transcription.");
-          const audioDataUri = await readFileAsDataURL(file);
+          if (!currentFileVal) throw new Error("No audio file provided for transcription.");
+          const audioDataUri = userMessageData.dataUri || await readFileAsDataURL(currentFileVal);
           aiResponse = await transcribeAudio({ audioDataUri });
           responseType = 'audio_transcription';
-          addMessageToConversation(activeConversationId, aiResponse.transcription, 'ai', responseType, undefined, 'audio_transcription');
+          addMessageToConversation(activeConversationId, aiResponse.transcription, 'ai', responseType, { originalAudioFileName: currentFileVal.name }, 'audio_transcription');
           break;
         case 'video_summarization':
-          if (!currentUrl) throw new Error("No video URL provided for summarization.");
-          aiResponse = await summarizeVideo({ videoUrl: currentUrl });
+          const videoUrlToSummarize = voiceInputText || currentUrlVal;
+          if (!videoUrlToSummarize) throw new Error("No video URL provided for summarization.");
+          aiResponse = await summarizeVideo({ videoUrl: videoUrlToSummarize });
           responseType = 'video_summary';
           addMessageToConversation(activeConversationId, aiResponse.summary, 'ai', responseType, undefined, 'video_summarization');
           break;
         case 'url_analysis':
-           if (!currentUrl) throw new Error("No URL provided for analysis.");
-           aiResponse = await generateAiChatResponse({ prompt: `Summarize and analyze the content of this URL: ${currentUrl}. ${currentInput ? `Specific focus: ${currentInput}` : ''}`, url: currentUrl });
+           const urlToAnalyze = voiceInputText || currentUrlVal;
+           if (!urlToAnalyze) throw new Error("No URL provided for analysis.");
+           aiResponse = await generateAiChatResponse({ prompt: `Summarize and analyze the content of this URL: ${urlToAnalyze}. ${!voiceInputText && currentInputVal ? `Specific focus: ${currentInputVal}` : ''}`, url: urlToAnalyze });
            responseType = 'url_analysis';
            addMessageToConversation(activeConversationId, aiResponse.response, 'ai', responseType, undefined, 'url_analysis');
           break;
@@ -295,22 +316,54 @@ export default function ChatPage() {
       toast({ title: "Error", description: detailedErrorMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = ""; 
+      // File state already cleared above
     }
   };
+
+
+  const handleMicUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+        const audioFile = event.target.files[0];
+        if (!audioFile.type.startsWith("audio/")) {
+            toast({ title: "Invalid File", description: "Please upload an audio file for voice input.", variant: "destructive" });
+            if (micInputRef.current) micInputRef.current.value = "";
+            return;
+        }
+        setIsLoading(true);
+        toast({ title: "Processing Voice Input", description: "Transcribing your audio..." });
+        try {
+            const audioDataUri = await readFileAsDataURL(audioFile);
+            const transcriptionResponse = await transcribeAudio({ audioDataUri });
+            const transcribedText = transcriptionResponse.transcription;
+            
+            if (transcribedText) {
+                // Directly submit this transcription as input for the current feature
+                await handleSubmit(undefined, transcribedText);
+            } else {
+                toast({ title: "Transcription Failed", description: "Could not understand audio.", variant: "destructive" });
+            }
+        } catch (error: any) {
+            console.error("Voice input transcription error:", error);
+            toast({ title: "Voice Input Error", description: error.message || "Failed to transcribe audio.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+            if (micInputRef.current) micInputRef.current.value = "";
+        }
+    }
+  };
+
 
   const copyToClipboard = (text: string) => {
       navigator.clipboard.writeText(text);
       toast({ title: "Copied!", description: "Content copied to clipboard." });
   };
 
-  const readFileAsDataURL = (file: File): Promise<string> => {
+  const readFileAsDataURL = (fileToRead: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileToRead);
     });
   };
 
@@ -326,7 +379,7 @@ export default function ChatPage() {
     };
     setConversations(prev => [newConversation, ...prev.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())]);
     setActiveConversationId(newConversationId);
-    if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile after selection
+    if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false);
   };
   
   const handleDeleteConversation = (convoId: string) => {
@@ -357,39 +410,7 @@ export default function ChatPage() {
     let lastIndex = 0;
     const parts: (string | JSX.Element)[] = [];
     let match;
-  
-    if (activeConversation?.messages[activeConversation.messages.length -1]?.type === 'code' && activeConversation?.messages[activeConversation.messages.length-1]?.data?.code) {
-      const codeMessage = activeConversation.messages[activeConversation.messages.length-1];
-      const language = getLanguageForHighlighting(codeMessage.data.language || defaultLang);
-      const rawCode = codeMessage.data.code.replace(/^```(\w+)?\n|```$/g, '');
-      try {
-        const highlightedCode = hljs.highlight(rawCode, { language, ignoreIllegals: true }).value;
-        return [ 
-          <div key={`code-direct`} className="code-block relative bg-black/80 rounded-md shadow-inner my-1 w-full overflow-x-auto">
-            <div className="flex justify-between items-center px-3 py-1.5 bg-muted/30 border-b border-border/50 rounded-t-md">
-              <span className="text-xs text-muted-foreground capitalize">{language}</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(rawCode)}>
-                <Copy className="h-3.5 w-3.5" />
-                <span className="sr-only">Copy code</span>
-              </Button>
-            </div>
-            <ScrollArea className="max-h-[60vh] p-0">
-              <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
-                <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
-              </pre>
-            </ScrollArea>
-          </div>
-        ];
-      } catch (error) {
-        console.error("Highlighting error for direct code:", error);
-        return [ 
-          <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-1 overflow-x-auto">
-            <code>{rawCode}</code>
-          </pre>
-        ];
-      }
-    }
-    
+      
     while ((match = codeBlockRegex.exec(text)) !== null) {
       const [fullMatch, lang, code] = match;
       const language = getLanguageForHighlighting(lang || defaultLang);
@@ -419,7 +440,7 @@ export default function ChatPage() {
       } catch (error) {
         console.error("Highlighting error:", error);
         parts.push(
-          <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-2 overflow-x-auto">
+          <pre key={`code-error-${match.index}`} className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-2 overflow-x-auto">
             <code>{code}</code>
           </pre>
         );
@@ -436,9 +457,27 @@ export default function ChatPage() {
 
 
   const renderMessageContent = (message: Message) => {
+    if (message.sender === 'user' && message.data?.fileType === 'image' && message.data.dataUri) {
+        return (
+            <div className="space-y-1">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+                <img src={message.data.dataUri} alt={message.data.fileName || "uploaded image"} className="rounded-md max-h-48 my-1 border border-border/50" data-ai-hint="user upload" />
+            </div>
+        );
+    }
+    if (message.sender === 'user' && message.data?.fileType === 'audio' && message.data.dataUri) {
+        return (
+            <div className="space-y-1">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+                <audio controls src={message.data.dataUri} className="w-full h-10 my-1">Your browser does not support the audio element.</audio>
+            </div>
+        );
+    }
+
     if (message.type === 'code' && message.data?.code) { 
       const language = getLanguageForHighlighting(message.data.language);
-      const codeToHighlight = message.data.code.replace(/^```(\w+)?\n|```$/g, ''); 
+      // Ensure code is a string and remove markdown backticks
+      const codeToHighlight = String(message.data.code).replace(/^```(\w+)?\n|```$/g, '');
       
       try {
         const highlightedCode = hljs.highlight(codeToHighlight, { language, ignoreIllegals: true }).value;
@@ -467,11 +506,12 @@ export default function ChatPage() {
       const contentParts = parseAndHighlight(message.text, message.data?.language);
       return <div className="text-sm whitespace-pre-wrap leading-relaxed">{contentParts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>;
     }
-    if (message.type === 'image_analysis' && message.data?.imageUrl) {
+    if (message.type === 'image_analysis' && message.data?.imageUrl && message.sender === 'ai') {
+      const descriptionParts = parseAndHighlight(message.text);
       return (
         <div className="space-y-2">
           <img src={message.data.imageUrl} alt="Analyzed content" className="rounded-md max-h-64 my-1 border border-border/50" data-ai-hint="analysis preview" />
-          <p className="text-sm mt-1 whitespace-pre-wrap">{message.text}</p>
+          <div className="text-sm mt-1 whitespace-pre-wrap">{descriptionParts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>
         </div>
       );
     }
@@ -600,7 +640,7 @@ export default function ChatPage() {
                   className={cn(
                     "p-2.5 rounded-lg shadow-md relative max-w-[85%] md:max-w-[75%] overflow-hidden", 
                     message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted text-foreground rounded-bl-none',
-                     (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' ) ? 'w-full break-words' : 'w-auto' 
+                     (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' || (message.data?.fileType === 'image' || message.data?.fileType === 'audio') ) ? 'w-full break-words' : 'w-auto' 
                   )}
                 >
                   {message.type === 'error' && <AlertTriangle className="h-4 w-4 text-destructive inline mr-1 mb-0.5" />}
@@ -673,13 +713,22 @@ export default function ChatPage() {
             <div className="flex items-end space-x-1.5"> 
               {currentFeatureDetails.requiresFileUpload && (
                 <>
-                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept={currentFeature === 'image_analysis' ? 'image/*' : (currentFeature === 'audio_transcription' ? 'audio/*' : '*/*')} disabled={!activeConversationId} />
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept={currentFeatureDetails.acceptedFileTypes || '*/*'} disabled={!activeConversationId} />
                   <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-9 w-9 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
                     <Paperclip className="h-3.5 w-3.5" />
                     <span className="sr-only">Attach file</span>
                   </Button>
                 </>
               )}
+               {/* Mic Button for voice input - uses audio_transcription internally */}
+               <>
+                  <input type="file" ref={micInputRef} onChange={handleMicUpload} className="hidden" accept="audio/*" disabled={!activeConversationId || isLoading} />
+                  <Button type="button" variant="outline" size="icon" onClick={() => micInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-9 w-9 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
+                    <Mic className="h-3.5 w-3.5" />
+                    <span className="sr-only">Use microphone</span>
+                  </Button>
+                </>
+
 
               {currentFeatureDetails.inputType === 'textarea' && !currentFeatureDetails.requiresCodeInput && (
                 <Textarea
@@ -727,4 +776,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
