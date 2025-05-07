@@ -89,9 +89,9 @@ export function PricingSection() {
   }, []);
   
   return (
-    <section id="pricing" ref={sectionRef} className="w-full py-12 md:py-24 lg:py-32 bg-background scroll-animation">
+    <section id="pricing" ref={sectionRef} className="w-full py-8 md:py-12 lg:py-16 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
+        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
           <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Access Tiers</div>
           <h2 className="text-3xl font-orbitron font-bold tracking-tighter sm:text-5xl">Choose Your Path to the Future</h2>
           <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
@@ -134,7 +134,7 @@ export function PricingSection() {
             </Card>
           ))}
         </div>
-         <p className="text-center text-muted-foreground mt-8 text-sm">
+         <p className="text-center text-muted-foreground mt-6 text-sm">
             Need a custom solution for your enterprise? <Link href="/contact" className="text-primary hover:underline">Contact Sales</Link>.
           </p>
       </div>

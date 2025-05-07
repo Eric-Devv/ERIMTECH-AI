@@ -32,7 +32,7 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="w-full py-12 md:py-24 lg:py-32 scroll-animation">
+    <section ref={sectionRef} className="w-full py-8 md:py-16 lg:py-20 scroll-animation">
       <div className="container px-4 md:px-6">
         <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
           <div className="flex flex-col justify-center space-y-4">
