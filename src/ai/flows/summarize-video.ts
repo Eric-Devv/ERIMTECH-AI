@@ -29,10 +29,12 @@ const summarizeVideoPrompt = ai.definePrompt({
   name: 'summarizeVideoPrompt',
   input: {schema: SummarizeVideoInputSchema},
   output: {schema: SummarizeVideoOutputSchema},
-  prompt: `You are an expert video summarizer.  Given the URL of a video,
-your job is to summarize the content of the video.
+  prompt: `You are an expert video summarizer. Given the URL of a video,
+your job is to summarize the content of the video. If the video content cannot be accessed or processed, provide a message indicating that.
 
-Video URL: {{{videoUrl}}}`,
+Video URL: {{{videoUrl}}}
+
+Your response should be a JSON object matching the output schema, specifically like: {"summary": "Your video summary here."}`,
 });
 
 const summarizeVideoFlow = ai.defineFlow(
@@ -43,6 +45,9 @@ const summarizeVideoFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await summarizeVideoPrompt(input);
-    return output!;
+    if (!output) {
+        throw new Error('Video summarization failed to produce an output.');
+    }
+    return output;
   }
 );

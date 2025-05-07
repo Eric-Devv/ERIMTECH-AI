@@ -38,7 +38,9 @@ const analyzeImagePrompt = ai.definePrompt({
   output: {schema: AnalyzeImageOutputSchema},
   prompt: `You are an expert image analyst. Analyze the image and provide a detailed description of its content.
 
-Image: {{media url=photoDataUri}}`,
+Image: {{media url=photoDataUri}}
+
+Your response should be a JSON object matching the output schema, specifically like: {"analysisResult": {"description": "Your detailed image description here."}}`,
 });
 
 const analyzeImageFlow = ai.defineFlow(

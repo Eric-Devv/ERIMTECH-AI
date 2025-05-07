@@ -34,7 +34,9 @@ const transcribeAudioPrompt = ai.definePrompt({
   name: 'transcribeAudioPrompt',
   input: {schema: TranscribeAudioInputSchema},
   output: {schema: TranscribeAudioOutputSchema},
-  prompt: `Transcribe the following audio: {{media url=audioDataUri}}`,
+  prompt: `Transcribe the following audio: {{media url=audioDataUri}}
+
+Your response should be a JSON object matching the output schema, specifically like: {"transcription": "The transcribed text here."}`,
 });
 
 const transcribeAudioFlow = ai.defineFlow(

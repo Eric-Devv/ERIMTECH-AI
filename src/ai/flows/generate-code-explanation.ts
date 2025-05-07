@@ -31,7 +31,15 @@ const prompt = ai.definePrompt({
   name: 'generateCodeExplanationPrompt',
   input: {schema: GenerateCodeExplanationInputSchema},
   output: {schema: GenerateCodeExplanationOutputSchema},
-  prompt: `You are an expert software developer. You will explain the following code snippet to the user. The code is written in the following language: {{{language}}}.\n\nCode: {{{code}}}\n\nExplanation: `,
+  prompt: `You are an expert software developer. You will explain the following code snippet to the user. The code is written in the following language: {{{language}}}.
+
+Code:
+\`\`\`{{{language}}}
+{{{code}}}
+\`\`\`
+
+Provide a clear and concise explanation of what the code does, how it works, and any important concepts or patterns it demonstrates.
+Your response should be a JSON object matching the output schema, specifically like: {"explanation": "Your detailed explanation here."}`,
 });
 
 const generateCodeExplanationFlow = ai.defineFlow(
@@ -42,6 +50,9 @@ const generateCodeExplanationFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+        throw new Error('Code explanation failed to produce an output.');
+    }
+    return output;
   }
 );
