@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, LogIn, Mail, KeyRound, UserPlus, Loader2 } from 'lucide-react';
+import { AlertCircle, LogIn, Mail, KeyRound, UserPlus, Loader2, User } from 'lucide-react'; // Added User import
 // import { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAnonymously } from '@/lib/firebase/auth'; // Placeholder for actual Firebase auth functions
 import { useToast } from "@/hooks/use-toast";
 import Image from 'next/image';
