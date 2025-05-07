@@ -90,7 +90,7 @@ export function PricingSection() {
   }, []);
   
   return (
-    <section id="pricing" ref={sectionRef} className="w-full py-8 md:py-12 bg-background scroll-animation">
+    <section id="pricing" ref={sectionRef} className="w-full py-8 md:py-10 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-3 text-center mb-8">
           <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Access Tiers</div>
@@ -142,3 +142,4 @@ export function PricingSection() {
     </section>
   );
 }
+

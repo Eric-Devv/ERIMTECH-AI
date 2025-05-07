@@ -6,7 +6,7 @@ import { CallToActionSection } from '@/components/landing/cta-section';
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center space-y-12 md:space-y-16 lg:space-y-20">
+    <div className="flex flex-col items-center justify-center space-y-10 md:space-y-12">
       <HeroSection />
       <FeaturesSection />
       <PricingSection />
@@ -14,3 +14,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

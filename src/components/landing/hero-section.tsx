@@ -33,12 +33,12 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="w-full py-8 md:py-10 lg:py-12 scroll-animation">
+    <section ref={sectionRef} className="w-full py-8 md:py-10 scroll-animation">
       <div className="container px-4 md:px-6">
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
           <div className="flex flex-col justify-center space-y-4">
             <div className="space-y-3">
-              <h1 className="text-4xl font-orbitron font-bold tracking-tighter sm:text-5xl xl:text-6xl/snug holographic-text">
+              <h1 className="text-4xl font-orbitron font-bold tracking-tighter sm:text-5xl xl:text-6xl/none leading-tight sm:leading-tight xl:leading-tight holographic-text">
                 Welcome to the Future with ERIMTECH AI
               </h1>
               <p className="max-w-[600px] text-muted-foreground md:text-xl">
@@ -66,3 +66,4 @@ export function HeroSection() {
     </section>
   );
 }
+
