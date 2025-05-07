@@ -1,6 +1,7 @@
 "use client";
-import { Bot, Code, ImageIcon, Mic, Film, Link2, ShieldCheck, Users, TerminalSquare } from 'lucide-react';
+import { Bot, Code, ImageIcon, Mic, Film, Link2, ShieldCheck, Users, TerminalSquare, PlayCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 
 const features = [
@@ -109,7 +110,7 @@ export function FeaturesSection() {
         </div>
         <div id="features-video" className="mt-16 md:mt-24 scroll-animation">
           <h3 className="text-2xl font-orbitron font-bold tracking-tighter sm:text-3xl text-center mb-8">See ERIMTECH AI in Action</h3>
-          <div className="aspect-video rounded-xl overflow-hidden glassmorphic">
+          <div className="aspect-video rounded-xl overflow-hidden glassmorphic relative">
              <Image
                 src="https://picsum.photos/1280/720?random=2"
                 alt="ERIMTECH AI Demo Video Thumbnail"
