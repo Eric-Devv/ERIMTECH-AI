@@ -24,8 +24,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import 'highlight.js/styles/github-dark.css';
-import hljs from 'highlight.js';
-
 
 interface Message {
   id: string;
@@ -78,9 +76,17 @@ export default function ChatPage() {
     }
 
     // Highlight code blocks on mount and when messages change
-    hljs.registerLanguage('javascript', require('highlight.js/lib/languages/javascript'));
-    hljs.registerLanguage('python', require('highlight.js/lib/languages/python'));
-    hljs.highlightAll();
+    const highlight = async () => {
+      try {
+        const hljs = (await import('highlight.js')).default;
+        hljs.registerLanguage('javascript', require('highlight.js/lib/languages/javascript'));
+        hljs.registerLanguage('python', require('highlight.js/lib/languages/python'));
+        hljs.highlightAll();
+      } catch (error) {
+        console.error("Failed to import highlight.js", error);
+      }
+    };
+    highlight();
   }, [messages]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,7 +159,7 @@ export default function ChatPage() {
            // Uses the same AI flow as chat, but we can signal it's a URL analysis specifically
            aiResponse = await generateAiChatResponse({ prompt: `Summarize and analyze the content of this URL: ${urlInput}`, url: urlInput });
            addMessage(aiResponse.response, 'ai', 'url_analysis');
-           break;
+          break;
         default:
           throw new Error("Invalid feature selected.");
       }
@@ -224,7 +230,7 @@ export default function ChatPage() {
                       {message.type === 'code' && message.data?.code ? (
                         <div className="relative">
                           <pre className="bg-muted p-2 rounded-md overflow-x-auto text-sm my-1 whitespace-pre-wrap">
-                            <code className={`language-${message.data.language}`} dangerouslySetInnerHTML={{ __html: hljs.highlight(message.data.code, { language: message.data.language }).value }} />
+                            <code className={`language-${message.data.language}`} dangerouslySetInnerHTML={{ __html: message.data.code }} />
                           </pre>
                           <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => copyToClipboard(message.data.code)}>
                             <Copy className="h-4 w-4" />
