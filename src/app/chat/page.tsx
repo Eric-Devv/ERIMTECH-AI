@@ -23,14 +23,9 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import 'highlight.js/styles/github-dark.css'; // Import a code highlighting theme
-import hljs from 'highlight.js/lib/core';
-import javascript from 'highlight.js/lib/languages/javascript';
-import python from 'highlight.js/lib/languages/python';
+import 'highlight.js/styles/github-dark.css';
+import hljs from 'highlight.js';
 
-
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('python', python);
 
 interface Message {
   id: string;
@@ -83,6 +78,8 @@ export default function ChatPage() {
     }
 
     // Highlight code blocks on mount and when messages change
+    hljs.registerLanguage('javascript', require('highlight.js/lib/languages/javascript'));
+    hljs.registerLanguage('python', require('highlight.js/lib/languages/python'));
     hljs.highlightAll();
   }, [messages]);
 
@@ -358,4 +355,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
