@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,13 +14,13 @@ interface MainNavProps {
 
 export function MainNav({ items }: MainNavProps) {
   return (
-    <div className="flex gap-6 md:gap-10">
+    <div className="flex gap-4 md:gap-8">
       <Link href="/" className="flex items-center space-x-2">
         <Bot className="h-8 w-8 text-primary" />
         <span className="inline-block font-orbitron text-xl font-bold">{siteConfig.name}</span>
       </Link>
       {items?.length ? (
-        <nav className="hidden md:flex gap-6">
+        <nav className="hidden md:flex gap-4 md:gap-6">
           {items?.map(
             (item, index) =>
               item.href && (
@@ -40,3 +41,4 @@ export function MainNav({ items }: MainNavProps) {
     </div>
   )
 }
+
