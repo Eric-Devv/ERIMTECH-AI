@@ -101,6 +101,9 @@ export const featureConfig: Record<AiFeature, { icon: React.ElementType, name: s
   url_analysis: { icon: LinkIcon, name: "Analyze URL", placeholder: "Enter URL to analyze its content...", requiresUrl: true, inputType: 'url' },
 };
 
+const ERIMTECH_LOGO_URL = "https://erimtechsolutions.co.ke/wp-content/uploads/2023/10/Erimlecita-logo-landscape-e1696571560902-1.png";
+
+
 const initialConversations: Conversation[] = [
   { id: 'chat-init-1', name: "Welcome Chat", messages: [{ id: 'msg-init-1', text: "Hello! How can I help you today?", sender: 'ai', timestamp: new Date(), feature: 'chat' }], feature: 'chat', timestamp: new Date() }
 ];
@@ -132,7 +135,7 @@ export default function ChatPage() {
   
   useEffect(() => {
     // Close sidebar by default on mobile
-    if (window.innerWidth < 768) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setSidebarOpen(false);
     }
   }, []);
@@ -240,20 +243,14 @@ export default function ChatPage() {
           break;
         case 'code_generation':
           const generationPrompt = `Generate ${codeLanguage} code for: ${currentCode}. ${currentInput ? `Additional instructions: ${currentInput}` : ''}`;
-          // For code generation, we might expect the response to be primarily code.
-          // Let's adjust the prompt to the `generateCodeExplanation` which can be repurposed or use a specific code generation flow if available.
-          // Assuming `generateCodeExplanation` can take a generation prompt and return code in its 'explanation' field for now.
-          // Or better, we'd have a dedicated `generateCode` flow.
-          // For this example, let's assume GPT-4 with a good prompt can generate code in markdown.
           aiResponse = await generateAiChatResponse({ prompt: `Please generate a ${codeLanguage} code snippet that does the following: ${currentCode}. ${currentInput ? `More details: ${currentInput}` : ''}. Output only the code block in markdown format.` });
-          responseType = 'code'; // Custom type to render as code
+          responseType = 'code'; 
           responseData = { language: codeLanguage, code: aiResponse.response }; 
           addMessageToConversation(activeConversationId, aiResponse.response, 'ai', responseType, responseData, 'code_generation');
           break;
         case 'code_explanation':
-          const explanationPrompt = `${currentInput ? `Regarding this code: ${currentInput}\n\n` : ''}\`\`\`${codeLanguage}\n${currentCode}\n\`\`\``;
-          aiResponse = await generateCodeExplanation({ code: currentCode, language: codeLanguage }); // Use the original code for explanation
-          responseType = 'text'; // Explanation is text, might contain code blocks handled by parser
+          aiResponse = await generateCodeExplanation({ code: currentCode, language: codeLanguage }); 
+          responseType = 'text'; 
           addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, { language: codeLanguage, originalCode: currentCode }, 'code_explanation');
           break;
         case 'image_analysis':
@@ -329,7 +326,7 @@ export default function ChatPage() {
     };
     setConversations(prev => [newConversation, ...prev.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())]);
     setActiveConversationId(newConversationId);
-    if (window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile after selection
+    if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile after selection
   };
   
   const handleDeleteConversation = (convoId: string) => {
@@ -361,15 +358,13 @@ export default function ChatPage() {
     const parts: (string | JSX.Element)[] = [];
     let match;
   
-    // First, handle the AI message if it's explicitly a 'code' type from code generation
     if (activeConversation?.messages[activeConversation.messages.length -1]?.type === 'code' && activeConversation?.messages[activeConversation.messages.length-1]?.data?.code) {
       const codeMessage = activeConversation.messages[activeConversation.messages.length-1];
       const language = getLanguageForHighlighting(codeMessage.data.language || defaultLang);
-      // Strip markdown backticks if present in the raw code
       const rawCode = codeMessage.data.code.replace(/^```(\w+)?\n|```$/g, '');
       try {
         const highlightedCode = hljs.highlight(rawCode, { language, ignoreIllegals: true }).value;
-        return [ // Return as an array with a single element
+        return [ 
           <div key={`code-direct`} className="code-block relative bg-black/80 rounded-md shadow-inner my-1 w-full overflow-x-auto">
             <div className="flex justify-between items-center px-3 py-1.5 bg-muted/30 border-b border-border/50 rounded-t-md">
               <span className="text-xs text-muted-foreground capitalize">{language}</span>
@@ -387,7 +382,7 @@ export default function ChatPage() {
         ];
       } catch (error) {
         console.error("Highlighting error for direct code:", error);
-        return [ // Return as an array with a single element
+        return [ 
           <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-1 overflow-x-auto">
             <code>{rawCode}</code>
           </pre>
@@ -395,7 +390,6 @@ export default function ChatPage() {
       }
     }
     
-    // For other message types or text with embedded code blocks
     while ((match = codeBlockRegex.exec(text)) !== null) {
       const [fullMatch, lang, code] = match;
       const language = getLanguageForHighlighting(lang || defaultLang);
@@ -437,17 +431,14 @@ export default function ChatPage() {
       parts.push(text.substring(lastIndex));
     }
     
-    return parts.length > 0 ? parts : [text]; // Ensure it always returns an array, even if just with original text
+    return parts.length > 0 ? parts : [text]; 
   };
 
 
   const renderMessageContent = (message: Message) => {
-    if (message.type === 'code' && message.data?.code) { // Specifically for code generation output
+    if (message.type === 'code' && message.data?.code) { 
       const language = getLanguageForHighlighting(message.data.language);
-      // The code from 'code' type might already be just the raw code.
-      // If it's wrapped in markdown, hljs.highlight will handle it if language is not 'plaintext'.
-      // If it's raw code, it's fine.
-      const codeToHighlight = message.data.code.replace(/^```(\w+)?\n|```$/g, ''); // Ensure backticks are removed
+      const codeToHighlight = message.data.code.replace(/^```(\w+)?\n|```$/g, ''); 
       
       try {
         const highlightedCode = hljs.highlight(codeToHighlight, { language, ignoreIllegals: true }).value;
@@ -472,7 +463,6 @@ export default function ChatPage() {
          return <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-1 overflow-x-auto"><code>{codeToHighlight}</code></pre>;
       }
     }
-    // For all other AI messages that might contain embedded code blocks
     if (message.sender === 'ai' && (message.type === 'text' || message.type === 'code_explanation' || message.type === 'url_analysis' || message.type === 'video_summary' || message.type === 'audio_transcription')) {
       const contentParts = parseAndHighlight(message.text, message.data?.language);
       return <div className="text-sm whitespace-pre-wrap leading-relaxed">{contentParts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>;
@@ -489,11 +479,10 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-full border border-border/50 rounded-lg overflow-hidden shadow-xl bg-muted/20"> {/* Main container with border & shadow */}
-      {/* Sidebar */}
+    <div className="flex h-full border border-border/50 rounded-lg overflow-hidden shadow-xl bg-muted/20">
       <div className={cn(
         "bg-background/80 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col border-r border-border/50",
-        sidebarOpen ? "w-64 p-2" : "w-0 p-0 opacity-0 md:w-16 md:p-1 md:opacity-100" // Adjusted widths
+        sidebarOpen ? "w-64 p-2" : "w-0 p-0 opacity-0 md:w-16 md:p-1 md:opacity-100" 
       )}>
         {sidebarOpen ? (
           <>
@@ -526,7 +515,7 @@ export default function ChatPage() {
                   isActive={activeConversationId === convo.id}
                   onClick={() => {
                     setActiveConversationId(convo.id);
-                    if (window.innerWidth < 768) setSidebarOpen(false);
+                    if (typeof window !== 'undefined' && window.innerWidth < 768) setSidebarOpen(false);
                   }}
                   isEditing={editingConversationId === convo.id}
                   editingName={editingConversationName}
@@ -553,7 +542,6 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background overflow-hidden">
         <header className="p-2 border-b border-border/50 flex items-center justify-between bg-muted/30 h-12 shrink-0">
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className={cn(sidebarOpen && "md:hidden", "h-8 w-8")}>
@@ -581,11 +569,14 @@ export default function ChatPage() {
           </Select>
         </header>
 
-        <ScrollArea className="flex-1 p-3 space-y-3" ref={scrollAreaRef}> {/* Adjusted padding and spacing */}
+        <ScrollArea className="flex-1 p-3 space-y-3" ref={scrollAreaRef}> 
           {(!activeConversation || activeConversation.messages.length === 0) && !isLoading && (
              <div className="flex flex-col items-center justify-center h-full text-center p-4">
               <div className="p-6 bg-muted/50 rounded-full mb-4 animate-pulse">
-                <Bot className="h-16 w-16 text-primary" />
+                <Avatar className="h-16 w-16 text-primary">
+                  <AvatarImage src={ERIMTECH_LOGO_URL} alt="AI Avatar" />
+                  <AvatarFallback><Bot className="h-8 w-8"/></AvatarFallback>
+                </Avatar>
               </div>
               <h2 className="text-xl font-orbitron mb-1.5">Welcome to ERIMTECH AI</h2>
               <p className="text-muted-foreground text-sm max-w-sm">
@@ -596,30 +587,30 @@ export default function ChatPage() {
           {activeConversation?.messages.map(message => (
             <div key={message.id} className={`flex flex-col mb-2 items-stretch ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={cn(
-                  "flex items-start gap-2 w-full", // Reduced gap
+                  "flex items-start gap-2 w-full", 
                   message.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}>
                 {message.sender === 'ai' && (
-                  <Avatar className="h-7 w-7 shrink-0"> {/* Smaller avatar */}
-                    <AvatarImage src="/logo.svg" alt="AI Avatar" />
+                  <Avatar className="h-7 w-7 shrink-0"> 
+                    <AvatarImage src={ERIMTECH_LOGO_URL} alt="AI Avatar" />
                     <AvatarFallback><Bot className="h-4 w-4"/></AvatarFallback>
                   </Avatar>
                 )}
                 <div 
                   className={cn(
-                    "p-2.5 rounded-lg shadow-md relative max-w-[85%] md:max-w-[75%] overflow-hidden", // Reduced padding, max-width
+                    "p-2.5 rounded-lg shadow-md relative max-w-[85%] md:max-w-[75%] overflow-hidden", 
                     message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted text-foreground rounded-bl-none',
-                     (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' ) ? 'w-full break-words' : 'w-auto' // Full width for code/image, break-words for better wrapping
+                     (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' ) ? 'w-full break-words' : 'w-auto' 
                   )}
                 >
                   {message.type === 'error' && <AlertTriangle className="h-4 w-4 text-destructive inline mr-1 mb-0.5" />}
                   {renderMessageContent(message)}
-                  <p className="text-xs text-muted-foreground/70 mt-1 text-right"> {/* Reduced margin */}
+                  <p className="text-xs text-muted-foreground/70 mt-1 text-right"> 
                     {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 {message.sender === 'user' && (
-                  <Avatar className="h-7 w-7 shrink-0"> {/* Smaller avatar */}
+                  <Avatar className="h-7 w-7 shrink-0"> 
                     <AvatarImage src="" alt="User Avatar"/>
                     <AvatarFallback><User className="h-4 w-4"/></AvatarFallback>
                   </Avatar>
@@ -630,19 +621,19 @@ export default function ChatPage() {
           {isLoading && activeConversationId && (
             <div className="flex items-start gap-2 max-w-[85%] md:max-w-[75%]">
               <Avatar className="h-7 w-7 shrink-0">
-                <AvatarImage src="/logo.svg" alt="AI Avatar" />
+                <AvatarImage src={ERIMTECH_LOGO_URL} alt="AI Avatar" />
                 <AvatarFallback><Bot className="h-4 w-4"/></AvatarFallback>
               </Avatar>
               <div className="p-2.5 rounded-lg shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-1.5">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <p className="text-xs text-muted-foreground">ERIMTECH AI is thinking...</p> {/* Smaller text */}
+                <p className="text-xs text-muted-foreground">ERIMTECH AI is thinking...</p> 
               </div>
             </div>
           )}
         </ScrollArea>
 
-        <footer className="p-2 border-t border-border/50 bg-muted/30 shrink-0"> {/* Reduced padding */}
-          <form onSubmit={handleSubmit} className="space-y-1.5"> {/* Reduced spacing */}
+        <footer className="p-2 border-t border-border/50 bg-muted/30 shrink-0"> 
+          <form onSubmit={handleSubmit} className="space-y-1.5"> 
             {currentFeatureDetails.requiresCodeInput && (
               <div className="grid grid-cols-[1fr_auto] gap-1.5 items-end">
                 <Textarea
@@ -650,12 +641,12 @@ export default function ChatPage() {
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="min-h-[60px] max-h-[150px] text-xs glassmorphic focus:ring-primary/50 resize-y py-1.5 px-2" // Adjusted size and padding
+                  className="min-h-[60px] max-h-[150px] text-xs glassmorphic focus:ring-primary/50 resize-y py-1.5 px-2" 
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
                 <Select value={codeLanguage} onValueChange={setCodeLanguage} disabled={isLoading || !activeConversationId}>
-                  <SelectTrigger className="w-auto md:w-[120px] h-9 text-xs glassmorphic focus:ring-primary/50 px-2"> {/* Adjusted height and padding */}
+                  <SelectTrigger className="w-auto md:w-[120px] h-9 text-xs glassmorphic focus:ring-primary/50 px-2"> 
                     <Code className="h-3 w-3 mr-1 text-muted-foreground" /> <span className="truncate">{codeLanguage}</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -674,12 +665,12 @@ export default function ChatPage() {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder={currentFeature === 'chat' ? "Optional: Enter URL for context..." : currentFeatureDetails.placeholder}
-                    className="h-9 text-xs glassmorphic focus:ring-primary/50 px-2" // Adjusted height and padding
+                    className="h-9 text-xs glassmorphic focus:ring-primary/50 px-2" 
                     disabled={isLoading || !activeConversationId}
                 />
             )}
             
-            <div className="flex items-end space-x-1.5"> {/* Reduced spacing */}
+            <div className="flex items-end space-x-1.5"> 
               {currentFeatureDetails.requiresFileUpload && (
                 <>
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept={currentFeature === 'image_analysis' ? 'image/*' : (currentFeature === 'audio_transcription' ? 'audio/*' : '*/*')} disabled={!activeConversationId} />
@@ -695,7 +686,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow min-h-[36px] max-h-[120px] text-xs glassmorphic focus:ring-primary/50 resize-y py-1.5 px-2" // Adjusted sizes and padding
+                  className="flex-grow min-h-[36px] max-h-[120px] text-xs glassmorphic focus:ring-primary/50 resize-y py-1.5 px-2" 
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -706,7 +697,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow h-9 text-xs glassmorphic focus:ring-primary/50 px-2" // Adjusted height and padding
+                  className="flex-grow h-9 text-xs glassmorphic focus:ring-primary/50 px-2" 
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -717,7 +708,7 @@ export default function ChatPage() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Add a comment or specific instructions..."
-                      className="flex-grow h-9 text-xs glassmorphic focus:ring-primary/50 px-2" // Adjusted height and padding
+                      className="flex-grow h-9 text-xs glassmorphic focus:ring-primary/50 px-2" 
                       disabled={isLoading || !activeConversationId}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                   />
@@ -729,7 +720,7 @@ export default function ChatPage() {
                 <span className="sr-only">Send</span>
               </Button>
             </div>
-            {file && <p className="text-xs text-muted-foreground pt-0.5">Selected: {file.name}</p>} {/* Reduced padding */}
+            {file && <p className="text-xs text-muted-foreground pt-0.5">Selected: {file.name}</p>} 
           </form>
         </footer>
       </div>
