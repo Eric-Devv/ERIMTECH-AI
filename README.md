@@ -44,11 +44,11 @@ ERIMTECH AI is a futuristic, AI-powered web application built with Next.js and F
     *   In your Firebase project, go to Project Overview and click the Web icon (`</>`) to add a web app.
     *   Give your app a nickname (e.g., "ERIMTECH AI Web").
     *   Firebase Hosting setup is optional at this stage but recommended for deployment.
-    *   Copy the Firebase configuration object.
+    *   Copy the Firebase configuration object provided by Firebase. This object contains your API key and other project details.
 
 3.  **Store Firebase Config**:
     *   Create a `.env.local` file in the root of your project.
-    *   Add your Firebase configuration variables:
+    *   Add your Firebase configuration variables, pasting the values from the Firebase config object you copied:
         ```env
         NEXT_PUBLIC_FIREBASE_API_KEY="YOUR_API_KEY"
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="YOUR_AUTH_DOMAIN"
@@ -59,8 +59,16 @@ ERIMTECH AI is a futuristic, AI-powered web application built with Next.js and F
         NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="YOUR_MEASUREMENT_ID" # Optional
         ```
     *   Ensure `.env.local` is in your `.gitignore` file.
+    *   **Important**: After creating or modifying `.env.local`, you **must restart your Next.js development server** for the changes to take effect.
 
-4.  **Enable Firebase Services**:
+4.  **Troubleshooting `auth/invalid-api-key`**:
+    *   This error means the `NEXT_PUBLIC_FIREBASE_API_KEY` is incorrect or not being loaded.
+    *   **Verify the Key**: Double-check that the `NEXT_PUBLIC_FIREBASE_API_KEY` in your `.env.local` file exactly matches the `apiKey` value from your Firebase project's web app configuration (Firebase Console > Project Settings > Your apps > Web app).
+    *   **Restart Server**: Ensure you've restarted your Next.js development server (`npm run dev`) after setting or changing the environment variables.
+    *   **Firebase Console**: Confirm that the web app is correctly registered in your Firebase project and that the associated API key is enabled for the Firebase services you are using (like Authentication).
+    *   **Browser Restrictions**: If you have API key restrictions set up in Google Cloud Console for your Firebase API key, ensure your development domain (e.g., `localhost:9002`) is allowed.
+
+5.  **Enable Firebase Services**:
     *   **Authentication**:
         *   In the Firebase Console, go to Authentication > Sign-in method.
         *   Enable desired providers (e.g., Google, Email/Password, Anonymous).
@@ -75,8 +83,8 @@ ERIMTECH AI is a futuristic, AI-powered web application built with Next.js and F
     *   **Cloud Messaging (FCM)** (Optional for Push Notifications):
         *   If you plan to use FCM, ensure it's enabled. No specific console setup is usually needed beyond adding the SDK if you use push notifications.
 
-5.  **Initialize Firebase in Your App**:
-    *   Create a Firebase initialization file (e.g., `src/lib/firebase/index.ts` - this project structure might vary).
+6.  **Initialize Firebase in Your App**:
+    *   The Firebase initialization is handled in `src/lib/firebase/index.ts`. This file reads the environment variables from `.env.local`.
         ```typescript
         // src/lib/firebase/index.ts (example path)
         import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -95,15 +103,8 @@ ERIMTECH AI is a futuristic, AI-powered web application built with Next.js and F
           measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
         };
 
-        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
-        // const messaging = getMessaging(app); // If using FCM
-
-        export { app, auth, db, storage /*, messaging */ };
+        // ... rest of the initialization code
         ```
-    *   **Note**: The current project uses a simplified Firebase setup for placeholder auth. You'll need to integrate this fully.
 
 ## Security Rules (Firestore & Storage)
 
@@ -287,7 +288,7 @@ This typically involves:
     ```
 3.  **Set up environment variables**:
     *   Copy `.env.example` to `.env.local`.
-    *   Fill in your Firebase configuration and AI API keys.
+    *   Fill in your Firebase configuration and AI API keys. **Remember to restart the dev server after changes.**
 4.  **Run Genkit development server (for AI flows)**:
     This command starts the Genkit developer UI, which allows you to test and inspect your AI flows.
     ```bash

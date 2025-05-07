@@ -1,94 +1,229 @@
+
 "use client";
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { BarChart, Users, Eye, ShieldAlert, Settings, FileText, Search, Trash2, Edit3 } from "lucide-react";
-// import { useAuth } from "@/hooks/use-auth"; // Placeholder for auth
-// import { db } from "@/lib/firebase"; // Placeholder for Firebase
-// import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore"; // Placeholder
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BarChart, Users, Eye, ShieldAlert, Settings, FileText, Search, Trash2, Edit3, Loader2 } from "lucide-react";
+import { useAuth } from "@/providers/auth-provider";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit, onSnapshot, setDoc, serverTimestamp, where } from "firebase/firestore";
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-// Mock data - replace with actual Firebase data
-const mockUsers = [
-  { id: "user1", email: "alpha@example.com", role: "admin", status: "active", lastLogin: new Date().toISOString(), promptsToday: 50 },
-  { id: "user2", email: "beta@example.com", role: "user", status: "active", lastLogin: new Date(Date.now() - 86400000).toISOString(), promptsToday: 120 },
-  { id: "user3", email: "gamma@example.com", role: "user", status: "suspended", lastLogin: new Date(Date.now() - 172800000).toISOString(), promptsToday: 5 },
-];
+interface UserData {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  lastLogin: any; // Firestore Timestamp or ISO string
+  promptsToday?: number; // Optional
+  displayName?: string;
+  photoURL?: string;
+  createdAt?: any;
+}
 
-const mockMedia = [
-  { id: "media1", type: "image", name: "futuristic_city.jpg", uploader: "beta@example.com", uploadedAt: new Date().toISOString(), status: "approved" },
-  { id: "media2", type: "audio", name: "conference_call.mp3", uploader: "alpha@example.com", uploadedAt: new Date(Date.now() - 3600000).toISOString(), status: "pending" },
-];
+interface MediaData {
+  id: string;
+  type: string;
+  name: string;
+  uploaderEmail: string; // Changed from uploader for clarity
+  uploadedAt: any; // Firestore Timestamp or ISO string
+  status: 'approved' | 'pending' | 'rejected';
+  fileURL?: string;
+}
 
-const mockApiLogs = [
-  { id: "log1", userId: "user2", endpoint: "/v1/chat", timestamp: new Date().toISOString(), status: 200, ipAddress: "192.168.1.100" },
-  { id: "log2", userId: "user1", endpoint: "/v1/code/generate", timestamp: new Date(Date.now() - 60000).toISOString(), status: 200, ipAddress: "203.0.113.45" },
-  { id: "log3", userId: "user2", endpoint: "/v1/image/analyze", timestamp: new Date(Date.now() - 120000).toISOString(), status: 429, ipAddress: "192.168.1.100" },
-];
+interface ApiLogData {
+  id: string;
+  userId: string;
+  userEmail?: string; // For easier display
+  endpoint: string;
+  timestamp: any; // Firestore Timestamp or ISO string
+  status: number;
+  ipAddress?: string;
+}
 
-const mockFeatureToggles = [
-  { id: "imageUploads", name: "Image Uploads", enabled: true },
-  { id: "videoSummarization", name: "Video Summarization (Beta)", enabled: false },
-  { id: "developerApi", name: "Developer API Access", enabled: true },
-];
+interface FeatureToggleData {
+  id: string;
+  name: string;
+  enabled: boolean;
+  description?: string;
+}
 
 
 export default function AdminPage() {
-  // const { user, isAdmin } = useAuth(); // Placeholder for auth and admin check
-  const user = { uid: "admin-user-uid", email: "admin@erimtech.ai" }; // Placeholder admin user
-  const isAdmin = true; // Placeholder admin status
+  const { user: authUser, loading: authLoading, isAdmin: authIsAdmin } = useAuth();
+  const { toast } = useToast();
 
-  const [users, setUsers] = useState(mockUsers);
-  const [media, setMedia] = useState(mockMedia);
-  const [apiLogs, setApiLogs] = useState(mockApiLogs);
-  const [featureToggles, setFeatureToggles] = useState(mockFeatureToggles);
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [media, setMedia] = useState<MediaData[]>([]);
+  const [apiLogs, setApiLogs] = useState<ApiLogData[]>([]);
+  const [featureToggles, setFeatureToggles] = useState<FeatureToggleData[]>([]);
+  
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  
+  // Use effective admin status, considering auth loading state
+  const isAdmin = !authLoading && authUser && authIsAdmin;
 
-  // useEffect(() => {
-  //   if (isAdmin) {
-  //     // Fetch users, media, logs, feature toggles from Firestore
-  //     const fetchData = async () => {
-  //       const usersSnapshot = await getDocs(collection(db, "users"));
-  //       setUsers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  //       // ... fetch other collections
-  //     };
-  //     fetchData();
-  //   }
-  // }, [isAdmin]);
 
-  if (!user || !isAdmin) {
+  useEffect(() => {
+    if (authLoading) return; // Wait for auth state to resolve
+
+    if (!authUser || !isAdmin) {
+      setIsLoadingData(false);
+      return;
+    }
+
+    setIsLoadingData(true);
+    const unsubscribers: (() => void)[] = [];
+
+    // Fetch Users
+    const usersQuery = query(collection(db, "users"), orderBy("email"));
+    unsubscribers.push(onSnapshot(usersQuery, (snapshot) => {
+      const fetchedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserData));
+      setUsers(fetchedUsers);
+    }, (error) => {
+      console.error("Error fetching users:", error);
+      toast({ title: "Error", description: "Could not fetch users.", variant: "destructive" });
+    }));
+
+    // Fetch Media (example: 'mediaUploads' collection)
+    const mediaQuery = query(collection(db, "mediaUploads"), orderBy("uploadedAt", "desc"), limit(50));
+    unsubscribers.push(onSnapshot(mediaQuery, (snapshot) => {
+      const fetchedMedia = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MediaData));
+      setMedia(fetchedMedia);
+    }, (error) => {
+      console.error("Error fetching media:", error);
+      toast({ title: "Error", description: "Could not fetch media.", variant: "destructive" });
+    }));
+    
+    // Fetch API Logs (example: 'apiLogs' collection)
+    const apiLogsQuery = query(collection(db, "apiLogs"), orderBy("timestamp", "desc"), limit(100));
+     unsubscribers.push(onSnapshot(apiLogsQuery, async (snapshot) => {
+        const fetchedLogsPromises = snapshot.docs.map(async (logDoc) => {
+            const logData = logDoc.data() as Omit<ApiLogData, 'id' | 'userEmail'>;
+            let userEmail = 'N/A';
+            if (logData.userId) {
+                const userDocRef = doc(db, "users", logData.userId);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    userEmail = userDocSnap.data()?.email || 'Unknown User';
+                }
+            }
+            return { id: logDoc.id, ...logData, userEmail } as ApiLogData;
+        });
+        const fetchedLogs = await Promise.all(fetchedLogsPromises);
+        setApiLogs(fetchedLogs);
+    }, (error) => {
+        console.error("Error fetching API logs:", error);
+        toast({ title: "Error", description: "Could not fetch API logs.", variant: "destructive" });
+    }));
+
+
+    // Fetch Feature Toggles
+    const featuresQuery = query(collection(db, "featureToggles"), orderBy("name"));
+    unsubscribers.push(onSnapshot(featuresQuery, (snapshot) => {
+      const fetchedFeatures = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FeatureToggleData));
+      setFeatureToggles(fetchedFeatures);
+    }, (error) => {
+      console.error("Error fetching feature toggles:", error);
+      toast({ title: "Error", description: "Could not fetch feature toggles.", variant: "destructive" });
+    }));
+
+    setIsLoadingData(false);
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, [authUser, isAdmin, authLoading, toast]);
+
+  if (authLoading || isLoadingData && !(!authUser || !isAdmin)) { // Show loader if auth is loading or if admin and data is loading
+    return (
+      <div className="container mx-auto py-12 px-4 md:px-6 text-center">
+        <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground">Loading admin panel...</p>
+      </div>
+    );
+  }
+  
+  if (!authUser || !isAdmin) {
     return (
       <div className="container mx-auto py-12 px-4 md:px-6 text-center">
         <ShieldAlert className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h1 className="text-3xl font-orbitron font-bold mb-4">Admin Access Only</h1>
-        <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        <p className="text-muted-foreground">You do not have permission to view this page. Ensure you are logged in with an admin account.</p>
       </div>
     );
   }
 
-  const handleUserStatusChange = async (userId: string, newStatus: string) => {
-    // Placeholder: update user status in Firestore
-    setUsers(users.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-    // await updateDoc(doc(db, "users", userId), { status: newStatus });
+  const handleUserUpdate = async (userId: string, data: Partial<UserData>) => {
+    try {
+      await updateDoc(doc(db, "users", userId), {...data, updatedAt: serverTimestamp()});
+      toast({ title: "User Updated", description: "User details saved successfully." });
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast({ title: "Error", description: "Failed to update user.", variant: "destructive" });
+    }
   };
-
-  const handleMediaStatusChange = async (mediaId: string, newStatus: string) => {
-     // Placeholder: update media status in Firestore
-    setMedia(media.map(m => m.id === mediaId ? { ...m, status: newStatus } : m));
-    // await updateDoc(doc(db, "mediaUploads", mediaId), { status: newStatus });
+  
+  const handleMediaStatusChange = async (mediaId: string, newStatus: MediaData['status']) => {
+    try {
+      await updateDoc(doc(db, "mediaUploads", mediaId), { status: newStatus });
+      toast({ title: "Media Status Updated", description: `Media marked as ${newStatus}.` });
+    } catch (error) {
+      console.error("Error updating media status:", error);
+      toast({ title: "Error", description: "Failed to update media status.", variant: "destructive" });
+    }
   };
   
   const handleFeatureToggle = async (featureId: string, enabled: boolean) => {
-    // Placeholder: update feature toggle in Firestore
-    setFeatureToggles(featureToggles.map(f => f.id === featureId ? { ...f, enabled } : f));
-    // await updateDoc(doc(db, "featureToggles", featureId), { enabled });
+    try {
+      await updateDoc(doc(db, "featureToggles", featureId), { enabled });
+      toast({ title: "Feature Toggle Updated", description: `Feature ${enabled ? 'enabled' : 'disabled'}.` });
+    } catch (error) {
+      console.error("Error updating feature toggle:", error);
+      toast({ title: "Error", description: "Failed to update feature toggle.", variant: "destructive" });
+    }
   };
 
-  const filteredUsers = users.filter(u => u.email.toLowerCase().includes(searchTerm.toLowerCase()));
-  const filteredApiLogs = apiLogs.filter(log => log.userId.toLowerCase().includes(searchTerm.toLowerCase()) || log.endpoint.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Implement delete functions (use with caution, add confirmation dialogs)
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      try {
+        await deleteDoc(doc(db, "users", userId));
+        // Note: Deleting a Firebase Auth user requires Admin SDK (backend)
+        toast({ title: "User Deleted (Firestore)", description: "User document removed from Firestore." });
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to delete user from Firestore.", variant: "destructive" });
+      }
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId: string) => {
+     if (window.confirm("Are you sure you want to delete this media item?")) {
+        try {
+            // TODO: Also delete from Firebase Storage if applicable
+            await deleteDoc(doc(db, "mediaUploads", mediaId));
+            toast({ title: "Media Deleted", description: "Media item removed." });
+        } catch (error) {
+            toast({ title: "Error", description: "Failed to delete media.", variant: "destructive" });
+        }
+     }
+  };
+
+
+  const filteredUsers = users.filter(u => u.email?.toLowerCase().includes(searchTerm.toLowerCase()) || u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredApiLogs = apiLogs.filter(log => log.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) || log.endpoint.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    if (timestamp.toDate) return timestamp.toDate().toLocaleString(); // Firestore Timestamp
+    if (typeof timestamp === 'string') return new Date(timestamp).toLocaleString();
+    return 'Invalid Date';
+  };
+
 
   return (
     <div className="container mx-auto py-12 px-4 md:px-6 space-y-8">
@@ -100,11 +235,10 @@ export default function AdminPage() {
 
       <Input 
         type="search"
-        placeholder="Search users or logs..."
+        placeholder="Search users, logs, or features..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="max-w-md mx-auto glassmorphic"
-        icon={<Search className="h-4 w-4 text-muted-foreground" />}
       />
 
       <Tabs defaultValue="users" className="w-full">
@@ -125,21 +259,32 @@ export default function AdminPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Display Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Login</TableHead>
-                    <TableHead>Prompts Today</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map(user => (
                     <TableRow key={user.id}>
+                      <TableCell>{user.displayName || 'N/A'}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
                       <TableCell>
-                        <Select value={user.status} onValueChange={(value) => handleUserStatusChange(user.id, value)}>
+                        <Select value={user.role} onValueChange={(value) => handleUserUpdate(user.id, { role: value })}>
+                            <SelectTrigger className="w-[120px] h-8 text-xs glassmorphic">
+                                <SelectValue placeholder="Role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={user.status} onValueChange={(value) => handleUserUpdate(user.id, { status: value })}>
                             <SelectTrigger className="w-[120px] h-8 text-xs glassmorphic">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -150,11 +295,10 @@ export default function AdminPage() {
                             </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>{new Date(user.lastLogin).toLocaleDateString()}</TableCell>
-                      <TableCell>{user.promptsToday}</TableCell>
+                      <TableCell>{formatTimestamp(user.lastLogin)}</TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><Edit3 className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => alert(`View/Edit user ${user.id} (not implemented)`)}><Edit3 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteUser(user.id)}><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -187,10 +331,10 @@ export default function AdminPage() {
                     <TableRow key={item.id}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.type}</TableCell>
-                      <TableCell>{item.uploader}</TableCell>
-                      <TableCell>{new Date(item.uploadedAt).toLocaleString()}</TableCell>
+                      <TableCell>{item.uploaderEmail}</TableCell>
+                      <TableCell>{formatTimestamp(item.uploadedAt)}</TableCell>
                       <TableCell>
-                         <Select value={item.status} onValueChange={(value) => handleMediaStatusChange(item.id, value)}>
+                         <Select value={item.status} onValueChange={(value) => handleMediaStatusChange(item.id, value as MediaData['status'])}>
                             <SelectTrigger className="w-[120px] h-8 text-xs glassmorphic">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -202,8 +346,8 @@ export default function AdminPage() {
                         </Select>
                       </TableCell>
                        <TableCell className="text-right space-x-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button> {/* Preview */}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        {item.fileURL && <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(item.fileURL, '_blank')}><Eye className="h-4 w-4" /></Button>}
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteMedia(item.id)}><Trash2 className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -217,13 +361,13 @@ export default function AdminPage() {
           <Card className="glassmorphic">
             <CardHeader>
               <CardTitle className="font-orbitron">API Usage Logs</CardTitle>
-              <CardDescription>View logs of API requests made to the platform.</CardDescription>
+              <CardDescription>View logs of API requests made to the platform. (Recent 100 logs)</CardDescription>
             </CardHeader>
             <CardContent>
                <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User ID</TableHead>
+                    <TableHead>User Email</TableHead>
                     <TableHead>Endpoint</TableHead>
                     <TableHead>Timestamp</TableHead>
                     <TableHead>Status</TableHead>
@@ -233,11 +377,11 @@ export default function AdminPage() {
                 <TableBody>
                   {filteredApiLogs.map(log => (
                     <TableRow key={log.id}>
-                      <TableCell>{log.userId}</TableCell>
+                      <TableCell>{log.userEmail || log.userId}</TableCell>
                       <TableCell>{log.endpoint}</TableCell>
-                      <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
-                      <TableCell className={log.status === 200 ? 'text-green-500' : 'text-red-500'}>{log.status}</TableCell>
-                      <TableCell>{log.ipAddress}</TableCell>
+                      <TableCell>{formatTimestamp(log.timestamp)}</TableCell>
+                      <TableCell className={log.status === 200 ? 'text-green-500' : (log.status >= 400 && log.status < 500 ? 'text-orange-500' : 'text-red-500')}>{log.status}</TableCell>
+                      <TableCell>{log.ipAddress || 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -253,9 +397,13 @@ export default function AdminPage() {
               <CardDescription>Enable or disable platform features globally.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {featureToggles.length === 0 && <p className="text-muted-foreground">No feature toggles configured yet.</p>}
               {featureToggles.map(feature => (
                 <div key={feature.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                  <Label htmlFor={feature.id} className="text-base">{feature.name}</Label>
+                  <div>
+                    <Label htmlFor={feature.id} className="text-base">{feature.name}</Label>
+                    {feature.description && <p className="text-xs text-muted-foreground">{feature.description}</p>}
+                  </div>
                   <Switch
                     id={feature.id}
                     checked={feature.enabled}
@@ -268,7 +416,6 @@ export default function AdminPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Placeholder for a simple stats overview */}
       <Card className="glassmorphic">
         <CardHeader>
           <CardTitle className="font-orbitron flex items-center"><BarChart className="inline mr-2 h-6 w-6" />Platform Overview</CardTitle>
@@ -280,7 +427,7 @@ export default function AdminPage() {
           </div>
           <div>
             <p className="text-3xl font-bold holographic-text !bg-clip-text !text-transparent">{apiLogs.length}</p>
-            <p className="text-muted-foreground">API Requests (Today - Mock)</p>
+            <p className="text-muted-foreground">API Requests (Loaded)</p>
           </div>
           <div>
             <p className="text-3xl font-bold holographic-text !bg-clip-text !text-transparent">{media.filter(m => m.status === 'pending').length}</p>
@@ -292,17 +439,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-// Helper for Input with icon
-const InputWithIcon = React.forwardRef<
-  HTMLInputElement,
-  React.ComponentPropsWithoutRef<typeof Input> & { icon?: React.ReactNode }
->(({ icon, className, ...props }, ref) => {
-  return (
-    <div className="relative">
-      {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">{icon}</div>}
-      <Input ref={ref} className={cn(icon ? "pl-10" : "", className)} {...props} />
-    </div>
-  );
-});
-InputWithIcon.displayName = "InputWithIcon";

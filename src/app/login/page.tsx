@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, LogIn, Mail, KeyRound, UserPlus, Loader2, User } from 'lucide-react'; // Added User import
-// import { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAnonymously } from '@/lib/firebase/auth'; // Placeholder for actual Firebase auth functions
+import { AlertCircle, LogIn, Mail, KeyRound, UserPlus, Loader2, User } from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
 import { useToast } from "@/hooks/use-toast";
 import Image from 'next/image';
 
@@ -17,62 +17,97 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [displayName, setDisplayName] = useState(''); // For signup
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isSignupLoading, setIsSignupLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAnonymousLoading, setIsAnonymousLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInAnonymously } = useAuth();
 
-  const handleAuthAction = async (action: 'login' | 'signup' | 'google' | 'anonymous') => {
-    setIsLoading(true);
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+    setIsLoginLoading(true);
     setError(null);
     try {
-      let userCredential;
-      switch (action) {
-        case 'login':
-          if (!email || !password) {
-            setError("Email and password are required.");
-            setIsLoading(false);
-            return;
-          }
-          // userCredential = await signInWithEmail(email, password);
-          toast({ title: "Login Successful (Mock)", description: "Welcome back!" });
-          router.push('/chat'); // Redirect to chat or dashboard
-          break;
-        case 'signup':
-          if (!email || !password || !confirmPassword) {
-            setError("All fields are required for signup.");
-            setIsLoading(false);
-            return;
-          }
-          if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            setIsLoading(false);
-            return;
-          }
-          // userCredential = await signUpWithEmail(email, password);
-          toast({ title: "Signup Successful (Mock)", description: "Your account has been created." });
-          router.push('/chat');
-          break;
-        case 'google':
-          // userCredential = await signInWithGoogle();
-          toast({ title: "Google Sign-In Successful (Mock)" });
-          router.push('/chat');
-          break;
-        case 'anonymous':
-          // userCredential = await signInAnonymously();
-          toast({ title: "Anonymous Sign-In Successful (Mock)", description: "You are browsing as a guest." });
-          router.push('/chat');
-          break;
+      const user = await signInWithEmail?.(email, password);
+      if (user) {
+        router.push('/chat');
+      } else {
+         // Error toast is handled by AuthProvider, but can set local error too
+         // setError("Login failed. Please check your credentials.");
       }
-      // console.log("Auth success:", userCredential); // Placeholder
     } catch (err: any) {
-      console.error("Auth error:", err);
-      setError(err.message || "An unknown error occurred.");
-      toast({ title: "Authentication Error", description: err.message || "Failed to authenticate.", variant: "destructive" });
+      // This catch might not be needed if AuthProvider handles all errors with toasts
+      setError(err.message || "An unknown error occurred during login.");
     } finally {
-      setIsLoading(false);
+      setIsLoginLoading(false);
     }
   };
+
+  const handleSignup = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !confirmPassword || !displayName) {
+      setError("Display name, email, and passwords are required for signup.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setIsSignupLoading(true);
+    setError(null);
+    try {
+      const user = await signUpWithEmail?.(email, password, displayName);
+      if (user) {
+        router.push('/chat');
+      } else {
+        // setError("Signup failed. Please try again.");
+      }
+    } catch (err: any) {
+      setError(err.message || "An unknown error occurred during signup.");
+    } finally {
+      setIsSignupLoading(false);
+    }
+  };
+  
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setError(null);
+    try {
+      const user = await signInWithGoogle?.();
+      if (user) {
+        router.push('/chat');
+      }
+    } catch (err: any) {
+      // Error already handled by provider's toast
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleAnonymousSignIn = async () => {
+    setIsAnonymousLoading(true);
+    setError(null);
+    try {
+      const user = await signInAnonymously?.();
+      if (user) {
+        router.push('/chat');
+      }
+    } catch (err: any) {
+      // Error already handled by provider's toast
+    } finally {
+      setIsAnonymousLoading(false);
+    }
+  };
+
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)] py-12 px-4">
@@ -90,63 +125,74 @@ export default function LoginPage() {
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
-            <CardContent className="space-y-4 pt-6">
-              {error && (
-                <div className="bg-destructive/20 p-3 rounded-md flex items-center text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 mr-2" /> {error}
+            <form onSubmit={handleLogin}>
+              <CardContent className="space-y-4 pt-6">
+                {error && (
+                  <div className="bg-destructive/20 p-3 rounded-md flex items-center text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4 mr-2" /> {error}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="login-email" type="email" placeholder="horizon@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                  </div>
                 </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="login-email" type="email" placeholder="horizon@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-10" />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
-                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="login-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-10" />
-                </div>
-              </div>
-              <Button onClick={() => handleAuthAction('login')} disabled={isLoading} className="w-full group">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />} Login
-              </Button>
-            </CardContent>
+                <Button type="submit" disabled={isLoginLoading} className="w-full group">
+                  {isLoginLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />} Login
+                </Button>
+              </CardContent>
+            </form>
           </TabsContent>
           <TabsContent value="signup">
-            <CardContent className="space-y-4 pt-6">
-              {error && (
-                <div className="bg-destructive/20 p-3 rounded-md flex items-center text-sm text-destructive">
-                  <AlertCircle className="h-4 w-4 mr-2" /> {error}
+            <form onSubmit={handleSignup}>
+              <CardContent className="space-y-4 pt-6">
+                {error && (
+                  <div className="bg-destructive/20 p-3 rounded-md flex items-center text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4 mr-2" /> {error}
+                  </div>
+                )}
+                 <div className="space-y-2">
+                  <Label htmlFor="signup-name">Display Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="signup-name" type="text" placeholder="Nova Stargazer" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required className="pl-10" />
+                  </div>
                 </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="signup-email" type="email" placeholder="pioneer@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="signup-email" type="email" placeholder="pioneer@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10" />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="signup-password" type="password" placeholder="Choose a strong password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-10" />
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="signup-password" type="password" placeholder="Choose a strong password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-10" />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                 <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="confirm-password" type="password" placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="pl-10" />
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="confirm-password" type="password" placeholder="Re-enter your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="pl-10" />
+                  </div>
                 </div>
-              </div>
-              <Button onClick={() => handleAuthAction('signup')} disabled={isLoading} className="w-full group">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />} Create Account
-              </Button>
-            </CardContent>
+                <Button type="submit" disabled={isSignupLoading} className="w-full group">
+                  {isSignupLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />} Create Account
+                </Button>
+              </CardContent>
+            </form>
           </TabsContent>
         </Tabs>
         <CardFooter className="flex flex-col space-y-4 pt-6">
@@ -161,13 +207,13 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 w-full">
-              <Button variant="outline" onClick={() => handleAuthAction('google')} disabled={isLoading} className="w-full group">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 
+              <Button variant="outline" onClick={handleGoogleSignIn} disabled={isGoogleLoading || isLoginLoading || isSignupLoading} className="w-full group">
+                {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 
                 <Image src="/google-logo.svg" alt="Google" width={16} height={16} className="mr-2 group-hover:scale-110 transition-transform" />} 
                 Google
               </Button>
-              <Button variant="outline" onClick={() => handleAuthAction('anonymous')} disabled={isLoading} className="w-full group">
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4 group-hover:rotate-[360deg] transition-transform duration-500" />} 
+              <Button variant="outline" onClick={handleAnonymousSignIn} disabled={isAnonymousLoading || isLoginLoading || isSignupLoading} className="w-full group">
+                {isAnonymousLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <User className="mr-2 h-4 w-4 group-hover:rotate-[360deg] transition-transform duration-500" />} 
                 Anonymous
               </Button>
             </div>
