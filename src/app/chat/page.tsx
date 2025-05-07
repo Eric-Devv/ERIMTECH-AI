@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Mic, Bot, User, Image as ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { Paperclip, Send, Mic, Bot, User, Image as ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2, Copy } from 'lucide-react';
 import { generateAiChatResponse } from '@/ai/flows/generate-ai-chat-response';
 import { generateCodeExplanation } from '@/ai/flows/generate-code-explanation';
 import { summarizeVideo } from '@/ai/flows/summarize-video';
@@ -161,6 +161,12 @@ export default function ChatPage() {
     }
   };
 
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({ title: "Copied!", description: "Code copied to clipboard." });
+    };
+
+
   const readFileAsDataURL = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -197,30 +203,38 @@ export default function ChatPage() {
       <ScrollArea className="flex-grow p-4 space-y-4" ref={scrollAreaRef}>
         {messages.map(message => (
           <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <Card className={`max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-2xl shadow ${message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-secondary rounded-bl-none'}`}>
-              <div className="flex items-start space-x-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={message.sender === 'user' ? undefined : '/logo.svg'} /> {/* Replace with actual user avatar if available */}
-                  <AvatarFallback>{message.sender === 'user' ? <User /> : <Bot />}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1" />}
-                  {message.type === 'code' && message.data?.code ? (
-                    <pre className="bg-muted p-2 rounded-md overflow-x-auto text-sm my-1"><code className={`language-${message.data.language}`}>{message.data.code}</code></pre>
-                  ) : message.type === 'image_analysis' && message.data?.imageUrl ? (
-                    <>
-                      <img src={message.data.imageUrl} alt="Analyzed image" className="rounded-md max-h-64 my-1" />
-                       <p className="text-sm mt-1">{message.text}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{message.text}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground/70 mt-1 text-right">
-                    {new Date(message.timestamp).toLocaleTimeString()}
-                  </p>
-                </div>
+             <div className="max-w-xs md:max-w-2xl"> {/* Container for bubble and buttons */}
+                <Card className={`p-3 rounded-2xl shadow ${message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-secondary rounded-bl-none'}`}>
+                  <div className="flex items-start space-x-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={message.sender === 'user' ? undefined : '/logo.svg'} /> {/* Replace with actual user avatar if available */}
+                      <AvatarFallback>{message.sender === 'user' ? <User /> : <Bot />}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1" />}
+                      {message.type === 'code' && message.data?.code ? (
+                        <div className="relative">
+                          <pre className="bg-muted p-2 rounded-md overflow-x-auto text-sm my-1 whitespace-pre-wrap"><code className={`language-${message.data.language}`}>{message.data.code}</code></pre>
+                          <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => copyToClipboard(message.data.code)}>
+                            <Copy className="h-4 w-4" />
+                            <span className="sr-only">Copy code</span>
+                          </Button>
+                        </div>
+                      ) : message.type === 'image_analysis' && message.data?.imageUrl ? (
+                        <>
+                          <img src={message.data.imageUrl} alt="Analyzed image" className="rounded-md max-h-64 my-1" />
+                          <p className="text-sm mt-1 whitespace-pre-wrap">{message.text}</p>
+                        </>
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground/70 mt-1 text-right">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </div>
-            </Card>
           </div>
         ))}
         {isLoading && (
