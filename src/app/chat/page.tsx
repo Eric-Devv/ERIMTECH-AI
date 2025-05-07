@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Mic, Bot, User, Image as ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2, Copy, CornerDownLeft, Settings2, Brain, Palette, Languages, Plus, Trash2, Edit2, CircleArrowLeft, Menu, SidebarClose, SidebarOpen, MessageSquare } from 'lucide-react';
+import { Paperclip, Send, Mic, Bot, User, Image as ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2, Copy, CornerDownLeft, Settings2, Brain, Palette, Languages, Plus, Trash2, Edit2, CircleArrowLeft, Menu, SidebarClose, SidebarOpen, MessageSquare, X, GripVertical } from 'lucide-react';
 import { generateAiChatResponse } from '@/ai/flows/generate-ai-chat-response';
 import { generateCodeExplanation } from '@/ai/flows/generate-code-explanation';
 import { summarizeVideo } from '@/ai/flows/summarize-video';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { analyzeImage } from '@/ai/flows/analyze-image';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -41,6 +41,8 @@ import json from 'highlight.js/lib/languages/json';
 import bash from 'highlight.js/lib/languages/bash';
 import shell from 'highlight.js/lib/languages/shell'; // Shell session
 import plaintext from 'highlight.js/lib/languages/plaintext';
+import { ConversationListItem } from '@/components/chat/conversation-list-item';
+
 
 // Register languages
 hljs.registerLanguage('javascript', javascript);
@@ -73,7 +75,7 @@ interface Message {
   isEditing?: boolean;
 }
 
-type AiFeature =
+export type AiFeature =
   | "chat"
   | "code_generation"
   | "code_explanation"
@@ -82,7 +84,7 @@ type AiFeature =
   | "video_summarization"
   | "url_analysis";
 
-interface Conversation {
+export interface Conversation {
   id: string;
   name: string;
   messages: Message[];
@@ -90,7 +92,7 @@ interface Conversation {
   timestamp: Date;
 }
 
-const featureConfig: Record<AiFeature, { icon: JSX.Element, name: string, placeholder: string, requiresFileUpload?: boolean, requiresUrl?: boolean, requiresCodeInput?: boolean, inputType?: 'text' | 'textarea' | 'url' | 'file', defaultLanguage?: string }> = {
+export const featureConfig: Record<AiFeature, { icon: JSX.Element, name: string, placeholder: string, requiresFileUpload?: boolean, requiresUrl?: boolean, requiresCodeInput?: boolean, inputType?: 'text' | 'textarea' | 'url' | 'file', defaultLanguage?: string }> = {
   chat: { icon: <Brain className="h-5 w-5" />, name: "AI Chat", placeholder: "Message ERIMTECH AI...", inputType: 'textarea' },
   code_generation: { icon: <Code className="h-5 w-5" />, name: "Generate Code", placeholder: "Describe the code you want to generate...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'python' },
   code_explanation: { icon: <Languages className="h-5 w-5" />, name: "Explain Code", placeholder: "Paste code here to get an explanation...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'javascript' },
@@ -129,14 +131,12 @@ export default function ChatPage() {
   const currentFeatureDetails = featureConfig[currentFeature];
   
   useEffect(() => {
-    // Scroll to bottom when messages in active conversation change
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [activeConversation?.messages]);
 
   useEffect(() => {
-    // Reset inputs when feature changes (i.e., active conversation changes to one with a different feature)
     setInput('');
     setUrlInput('');
     setCodeInput('');
@@ -182,14 +182,13 @@ export default function ChatPage() {
     if (hljs.getLanguage(lowerLang)) {
       return lowerLang;
     }
-    // Aliases for common variations
     const aliases: Record<string, string> = {
         'js': 'javascript',
         'ts': 'typescript',
         'py': 'python',
-        'jsx': 'javascript', // or 'xml' if you prefer for JSX structure highlighting
+        'jsx': 'javascript',
         'tsx': 'typescript',
-        'html': 'xml', // HTML is often highlighted as XML
+        'html': 'xml',
         'sh': 'bash',
     };
     return aliases[lowerLang] || 'plaintext';
@@ -233,19 +232,15 @@ export default function ChatPage() {
           break;
         case 'code_generation':
           const generationPrompt = `Generate ${codeLanguage} code for: ${currentCode}. ${currentInput ? `Additional instructions: ${currentInput}` : ''}`;
-          // Using generateCodeExplanation for structured code output for now
           aiResponse = await generateCodeExplanation({ code: generationPrompt, language: codeLanguage }); 
           responseType = 'code';
-          // The actual code might be embedded within the explanation. For direct code output,
-          // the AI flow would need to return a specific field for just the code.
-          // Here, we assume the explanation IS or CONTAINS the code.
           responseData = { language: codeLanguage, code: aiResponse.explanation }; 
           addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, responseData, 'code_generation');
           break;
         case 'code_explanation':
           const explanationPrompt = `${currentInput ? `Regarding this code: ${currentInput}\n\n` : ''}${currentCode}`;
           aiResponse = await generateCodeExplanation({ code: explanationPrompt, language: codeLanguage });
-          responseType = 'text'; // The explanation itself is text, but might contain code blocks if AI includes them
+          responseType = 'text';
           addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, { language: codeLanguage, originalCode: currentCode }, 'code_explanation');
           break;
         case 'image_analysis':
@@ -315,7 +310,7 @@ export default function ChatPage() {
     };
     setConversations(prev => [newConversation, ...prev]);
     setActiveConversationId(newConversationId);
-    if (window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile after new chat
+    if (window.innerWidth < 768) setSidebarOpen(false);
   };
   
   const handleDeleteConversation = (convoId: string) => {
@@ -350,12 +345,10 @@ export default function ChatPage() {
       const [fullMatch, lang, code] = match;
       const language = getLanguageForHighlighting(lang || defaultLang);
       
-      // Add text before the code block
       if (match.index > lastIndex) {
         parts.push(text.substring(lastIndex, match.index));
       }
       
-      // Add highlighted code block
       try {
         const highlightedCode = hljs.highlight(code, { language, ignoreIllegals: true }).value;
         parts.push(
@@ -367,7 +360,7 @@ export default function ChatPage() {
                 <span className="sr-only">Copy code</span>
               </Button>
             </div>
-            <ScrollArea className="max-h-[400px]"> {/* Added ScrollArea for vertical scrolling of long code blocks */}
+            <ScrollArea className="max-h-[400px] p-0">
               <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
                 <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
               </pre>
@@ -376,7 +369,6 @@ export default function ChatPage() {
         );
       } catch (error) {
         console.error("Highlighting error:", error);
-        // Fallback for non-highlightable code
         parts.push(
           <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-2 overflow-x-auto">
             <code>{code}</code>
@@ -386,12 +378,10 @@ export default function ChatPage() {
       lastIndex = match.index + fullMatch.length;
     }
   
-    // Add any remaining text after the last code block
     if (lastIndex < text.length) {
       parts.push(text.substring(lastIndex));
     }
     
-    // If no code blocks, return the plain text
     if (parts.length === 0 && text) {
         return [text];
     }
@@ -401,12 +391,10 @@ export default function ChatPage() {
 
 
   const renderMessageContent = (message: Message) => {
-    // For AI messages of specified types, use parseAndHighlight
     if (message.sender === 'ai' && (message.type === 'text' || message.type === 'code_explanation' || message.type === 'url_analysis' || message.type === 'video_summary' || message.type === 'audio_transcription')) {
       const contentParts = parseAndHighlight(message.text, message.data?.language);
       return <div className="text-sm whitespace-pre-wrap leading-relaxed">{contentParts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>;
     }
-    // For specific 'code' type messages (potentially from code generation if it returns just code)
     if (message.type === 'code' && message.data?.code) {
       const language = getLanguageForHighlighting(message.data.language);
       const highlightedCode = hljs.highlight(message.data.code, { language, ignoreIllegals: true }).value;
@@ -419,7 +407,7 @@ export default function ChatPage() {
               <span className="sr-only">Copy code</span>
             </Button>
           </div>
-          <ScrollArea className="max-h-[400px] p-0"> 
+          <ScrollArea className="max-h-[60vh] p-0"> 
             <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
                 <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
             </pre>
@@ -429,33 +417,32 @@ export default function ChatPage() {
     }
     if (message.type === 'image_analysis' && message.data?.imageUrl) {
       return (
-        <>
+        <div className="space-y-2">
           <img src={message.data.imageUrl} alt="Analyzed content" className="rounded-md max-h-64 my-1 border border-border/50" data-ai-hint="analysis preview" />
           <p className="text-sm mt-1 whitespace-pre-wrap">{message.text}</p>
-        </>
+        </div>
       );
     }
-    // Default for user messages and other AI messages not covered above
     return <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>;
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)]"> {/* Adjusted height for header */}
+    <div className="flex h-[calc(100vh-4rem)] border border-border/50 rounded-lg overflow-hidden shadow-xl bg-muted/20"> {/* Main container with border & shadow */}
       {/* Sidebar */}
       <div className={cn(
-        "bg-muted/30 transition-all duration-300 ease-in-out flex flex-col border-r border-border/50", // Slightly less opaque sidebar
-        sidebarOpen ? "w-72 p-2 md:p-3" : "w-0 p-0 opacity-0 hidden md:block md:w-16 md:p-2 md:opacity-100"
+        "bg-background/80 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col border-r border-border/50",
+        sidebarOpen ? "w-72 p-3" : "w-0 p-0 opacity-0 md:w-20 md:p-2 md:opacity-100"
       )}>
         {sidebarOpen ? (
           <>
-            <div className="flex justify-between items-center mb-2 md:mb-3">
+            <div className="flex justify-between items-center mb-3">
               <h2 className="text-lg font-orbitron text-primary">Conversations</h2>
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="md:hidden">
                 <SidebarClose className="h-5 w-5" />
               </Button>
             </div>
             <Select onValueChange={(value) => handleStartNewConversation(value as AiFeature)}>
-              <SelectTrigger className="w-full h-9 md:h-10 mb-2 md:mb-3 glassmorphic focus:ring-primary/50">
+              <SelectTrigger className="w-full h-10 mb-3 glassmorphic focus:ring-primary/50">
                 <Plus className="h-4 w-4 mr-2" /> New Chat
               </SelectTrigger>
               <SelectContent>
@@ -468,60 +455,32 @@ export default function ChatPage() {
                 ))}
               </SelectContent>
             </Select>
-            <ScrollArea className="flex-grow">
+            <ScrollArea className="flex-grow -mr-2 pr-2"> {/* Negative margin to hide scrollbar track */}
               <div className="space-y-1.5">
-                {conversations.map(convo => (
-                  <Card 
-                    key={convo.id} 
-                    onClick={() => {
-                      setActiveConversationId(convo.id);
-                      if (window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile
-                    }}
-                    className={cn(
-                      "p-2 rounded-lg cursor-pointer transition-colors hover:bg-primary/10",
-                      activeConversationId === convo.id ? "bg-primary/20 border-primary/50" : "bg-background/30"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      {editingConversationId === convo.id ? (
-                        <Input 
-                          value={editingConversationName}
-                          onChange={(e) => setEditingConversationName(e.target.value)}
-                          onBlur={() => handleSaveConversationName(convo.id)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSaveConversationName(convo.id)}
-                          className="h-7 text-sm flex-grow mr-1"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="text-sm font-medium truncate flex-grow">{convo.name}</span>
-                      )}
-                      <div className="flex items-center shrink-0">
-                        {editingConversationId !== convo.id && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); handleEditConversationName(convo.id);}}>
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-destructive" onClick={(e) => {e.stopPropagation(); handleDeleteConversation(convo.id)}}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        {React.cloneElement(featureConfig[convo.feature].icon, {className: "h-3.5 w-3.5 mr-1"})}
-                        {featureConfig[convo.feature].name}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{new Date(convo.timestamp).toLocaleDateString()}</p>
-                    </div>
-                  </Card>
-                ))}
+              {conversations.map(convo => (
+                <ConversationListItem
+                  key={convo.id}
+                  convo={convo}
+                  isActive={activeConversationId === convo.id}
+                  onClick={() => {
+                    setActiveConversationId(convo.id);
+                    if (window.innerWidth < 768) setSidebarOpen(false);
+                  }}
+                  isEditing={editingConversationId === convo.id}
+                  editingName={editingConversationName}
+                  onNameChange={setEditingConversationName}
+                  onSaveName={handleSaveConversationName}
+                  onEdit={handleEditConversationName}
+                  onDelete={handleDeleteConversation}
+                />
+              ))}
               </div>
             </ScrollArea>
           </>
-        ) : ( // Collapsed sidebar for desktop
-          <div className="flex flex-col items-center space-y-2 md:space-y-3">
-             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="mt-1">
-                <SidebarOpen className="h-5 w-5" />
+        ) : ( 
+          <div className="flex flex-col items-center space-y-3 mt-1">
+             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} title="Open Sidebar">
+                <Menu className="h-5 w-5" />
               </Button>
             {Object.entries(featureConfig).map(([key, { icon, name }]) => (
                 <Button key={key} variant="ghost" size="icon" onClick={() => handleStartNewConversation(key as AiFeature)} title={`New ${name} Chat`}>
@@ -534,18 +493,18 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background overflow-hidden">
-        <header className="p-2 md:p-3 border-b border-border/50 flex items-center justify-between bg-muted/20">
+        <header className="p-3 border-b border-border/50 flex items-center justify-between bg-muted/30">
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className={cn(sidebarOpen && "md:hidden")}>
                 {sidebarOpen ? <CircleArrowLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           <div className="flex items-center gap-2">
-            {activeConversation && React.cloneElement(featureConfig[activeConversation.feature].icon, {className: "h-5 w-5 md:h-6 md:w-6 text-primary"})}
-            <h2 className="text-md md:text-lg font-orbitron text-primary truncate">
+            {activeConversation && React.cloneElement(featureConfig[activeConversation.feature].icon, {className: "h-6 w-6 text-primary"})}
+            <h2 className="text-lg font-orbitron text-primary truncate">
               {activeConversation ? activeConversation.name : "ERIMTECH AI"}
             </h2>
           </div>
           <Select value={currentFeature} onValueChange={(value) => handleStartNewConversation(value as AiFeature)}>
-            <SelectTrigger className="w-auto md:w-[200px] h-8 md:h-9 text-xs glassmorphic focus:ring-primary/50">
+            <SelectTrigger className="w-auto md:w-[200px] h-9 text-xs glassmorphic focus:ring-primary/50">
               <div className="flex items-center gap-1.5"> {React.cloneElement(currentFeatureDetails.icon, {className:"h-4 w-4"})} <span className="hidden md:inline">{currentFeatureDetails.name}</span></div>
             </SelectTrigger>
             <SelectContent>
@@ -560,55 +519,60 @@ export default function ChatPage() {
           </Select>
         </header>
 
-        <ScrollArea className="flex-grow p-3 md:p-4 space-y-3 md:space-y-4" ref={scrollAreaRef}>
+        <ScrollArea className="flex-grow p-4 space-y-4" ref={scrollAreaRef}>
           {(!activeConversation || activeConversation.messages.length === 0) && !isLoading && (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <MessageSquare className="h-12 w-12 md:h-16 md:w-16 mb-3 md:mb-4 text-primary/70" />
-              <p className="text-md md:text-lg">Start a new conversation</p>
-              <p className="text-sm">Select a feature or choose from your past chats.</p>
+             <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="p-8 bg-muted/50 rounded-full mb-6 animate-pulse">
+                <Bot className="h-20 w-20 text-primary" />
+              </div>
+              <h2 className="text-2xl font-orbitron mb-2">Welcome to ERIMTECH AI</h2>
+              <p className="text-muted-foreground max-w-md">
+                Select a feature or start a new chat from the sidebar to begin. 
+                Your journey into advanced AI starts now.
+              </p>
             </div>
           )}
           {activeConversation?.messages.map(message => (
-            <div key={message.id} className={`flex flex-col mb-3 ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
+            <div key={message.id} className={`flex flex-col mb-3 items-stretch ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={cn(
-                  "flex items-start gap-2 w-full",
+                  "flex items-start gap-2.5 w-full",
                   message.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}>
                 {message.sender === 'ai' && (
-                  <Avatar className="h-7 w-7 md:h-8 md:w-8 shrink-0">
+                  <Avatar className="h-8 w-8 shrink-0">
                     <AvatarImage src="/logo.svg" alt="AI Avatar" />
-                    <AvatarFallback><Bot className="h-4 w-4 md:h-5 md:w-5"/></AvatarFallback>
+                    <AvatarFallback><Bot className="h-5 w-5"/></AvatarFallback>
                   </Avatar>
                 )}
-                <Card 
+                <div 
                   className={cn(
-                    "p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-md relative max-w-[90%] md:max-w-[80%]",
+                    "p-3 rounded-xl shadow-md relative max-w-[90%] md:max-w-[80%] overflow-hidden", // Added overflow-hidden
                     message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted text-foreground rounded-bl-none',
-                     (message.type === 'code' || (message.text && message.text.includes("```"))) ? 'w-full' : '' // Make code blocks take more width
+                    (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' ) ? 'w-full sm:w-auto' : 'w-auto' // Full width for code/image on small, auto on larger
                   )}
                 >
-                  {message.type === 'error' && <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-destructive inline mr-1 mb-0.5" />}
+                  {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1 mb-0.5" />}
                   {renderMessageContent(message)}
-                  <p className="text-xs text-muted-foreground/60 mt-1 text-right">
+                  <p className="text-xs text-muted-foreground/70 mt-1.5 text-right">
                     {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
-                </Card>
+                </div>
                 {message.sender === 'user' && (
-                  <Avatar className="h-7 w-7 md:h-8 md:w-8 shrink-0">
-                    <AvatarImage src="" alt="User Avatar"/> {/* Placeholder for user avatar if available */}
-                    <AvatarFallback><User className="h-4 w-4 md:h-5 md:w-5"/></AvatarFallback>
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src="" alt="User Avatar"/>
+                    <AvatarFallback><User className="h-5 w-5"/></AvatarFallback>
                   </Avatar>
                 )}
               </div>
             </div>
           ))}
           {isLoading && activeConversationId && (
-            <div className="flex items-start gap-2 max-w-[90%] md:max-w-[80%]">
-              <Avatar className="h-7 w-7 md:h-8 md:w-8 shrink-0">
+            <div className="flex items-start gap-2.5 max-w-[90%] md:max-w-[80%]">
+              <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src="/logo.svg" alt="AI Avatar" />
-                <AvatarFallback><Bot className="h-4 w-4 md:h-5 md:w-5"/></AvatarFallback>
+                <AvatarFallback><Bot className="h-5 w-5"/></AvatarFallback>
               </Avatar>
-              <div className="p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-2">
+              <div className="p-3 rounded-xl shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">ERIMTECH AI is thinking...</p>
               </div>
@@ -616,21 +580,21 @@ export default function ChatPage() {
           )}
         </ScrollArea>
 
-        <footer className="p-2 md:p-3 border-t border-border/50 bg-muted/20">
-          <form onSubmit={handleSubmit} className="space-y-1.5 md:space-y-2">
+        <footer className="p-3 border-t border-border/50 bg-muted/30">
+          <form onSubmit={handleSubmit} className="space-y-2">
             {currentFeatureDetails.requiresCodeInput && (
-              <div className="grid grid-cols-[1fr_auto] gap-1.5 md:gap-2 items-end">
+              <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
                 <Textarea
                   id="codeInput"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="min-h-[60px] md:min-h-[80px] max-h-[150px] md:max-h-[200px] text-sm glassmorphic focus:ring-primary/50 resize-y"
+                  className="min-h-[80px] max-h-[200px] text-sm glassmorphic focus:ring-primary/50 resize-y"
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
                 <Select value={codeLanguage} onValueChange={setCodeLanguage} disabled={isLoading || !activeConversationId}>
-                  <SelectTrigger className="w-auto md:w-[140px] h-9 md:h-10 text-xs glassmorphic focus:ring-primary/50">
+                  <SelectTrigger className="w-auto md:w-[140px] h-10 text-xs glassmorphic focus:ring-primary/50">
                     <Code className="h-3.5 w-3.5 mr-1 text-muted-foreground" /> <span className="truncate">{codeLanguage}</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -649,16 +613,16 @@ export default function ChatPage() {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder={currentFeature === 'chat' ? "Optional: Enter URL for context..." : currentFeatureDetails.placeholder}
-                    className="h-9 md:h-10 text-sm glassmorphic focus:ring-primary/50"
+                    className="h-10 text-sm glassmorphic focus:ring-primary/50"
                     disabled={isLoading || !activeConversationId}
                 />
             )}
             
-            <div className="flex items-center space-x-1.5 md:space-x-2">
+            <div className="flex items-end space-x-2"> {/* Changed to items-end for better alignment with Textarea */}
               {currentFeatureDetails.requiresFileUpload && (
                 <>
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept={currentFeature === 'image_analysis' ? 'image/*' : (currentFeature === 'audio_transcription' ? 'audio/*' : '*/*')} disabled={!activeConversationId} />
-                  <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-9 w-9 md:h-10 md:w-10 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
+                  <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-10 w-10 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
                     <Paperclip className="h-4 w-4" />
                     <span className="sr-only">Attach file</span>
                   </Button>
@@ -670,7 +634,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow min-h-[36px] md:min-h-[40px] max-h-[120px] md:max-h-[150px] text-sm glassmorphic focus:ring-primary/50 resize-y"
+                  className="flex-grow min-h-[40px] max-h-[150px] text-sm glassmorphic focus:ring-primary/50 resize-y"
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -681,36 +645,33 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow h-9 md:h-10 text-sm glassmorphic focus:ring-primary/50"
+                  className="flex-grow h-10 text-sm glassmorphic focus:ring-primary/50"
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
               )}
-               {/* Input for general text if not covered by specific types */}
               {(currentFeatureDetails.requiresCodeInput || (currentFeatureDetails.requiresUrl && currentFeature !== 'chat') || currentFeatureDetails.requiresFileUpload) && (
                   <Input
                       type="text"
-                      value={input} // Use main input for general comments with these features
+                      value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Add a comment or specific instructions..."
-                      className="flex-grow h-9 md:h-10 text-sm glassmorphic focus:ring-primary/50"
+                      className="flex-grow h-10 text-sm glassmorphic focus:ring-primary/50"
                       disabled={isLoading || !activeConversationId}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                   />
               )}
 
 
-              <Button type="submit" size="icon" disabled={isLoading || (!input && !file && !urlInput && !codeInput) || !activeConversationId} className="h-9 w-9 md:h-10 md:w-10 bg-primary hover:bg-primary/90 disabled:bg-muted">
+              <Button type="submit" size="icon" disabled={isLoading || (!input && !file && !urlInput && !codeInput) || !activeConversationId} className="h-10 w-10 bg-primary hover:bg-primary/90 disabled:bg-muted">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 <span className="sr-only">Send</span>
               </Button>
             </div>
-            {file && <p className="text-xs text-muted-foreground pt-0.5 md:pt-1">Selected: {file.name}</p>}
+            {file && <p className="text-xs text-muted-foreground pt-1">Selected: {file.name}</p>}
           </form>
         </footer>
       </div>
     </div>
   );
 }
-
-    

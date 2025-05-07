@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Inter, Orbitron } from 'next/font/google';
@@ -8,7 +7,6 @@ import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/providers/auth-provider';
-// Removed useState and useEffect as they are no longer needed for isClient check
 
 const inter = Inter({
   subsets: ['latin'],
@@ -21,23 +19,18 @@ const orbitron = Orbitron({
   variable: '--font-orbitron',
 });
 
-// Metadata should be defined in a server component parent or page.tsx if this layout remains "use client".
-// For now, it's commented out.
-// export const metadata: Metadata = {
-//   title: 'ERIMTECH AI - Futuristic AI Solutions',
-//   description: 'Experience the future with ERIMTECH AI: Advanced Chat, Code Generation, Image Analysis, and more.',
-//   icons: {
-//     icon: "/logo.svg",
-//   },
-// };
+// If metadata is needed for this Client Component layout,
+// it should be exported from a separate metadata.ts file or a parent Server Component.
+// For example, you might have a src/app/metadata.ts and then import it in a Server Component parent.
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Removed isClient state and useEffect
-
+  // Removed isClient state and useEffect logic.
+  // Providers are now rendered directly. This assumes ThemeProvider and AuthProvider
+  // are SSR-compatible or handle client-side only logic internally.
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${orbitron.variable} font-sans antialiased flex flex-col min-h-screen`}>
@@ -47,11 +40,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* AuthProvider and its children are now always rendered */}
           <AuthProvider>
             <div className="flex flex-col min-h-screen">
               <SiteHeader />
-              <main className="flex-grow container mx-auto px-4 py-8">
+              <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
                 {children}
               </main>
               <SiteFooter />
