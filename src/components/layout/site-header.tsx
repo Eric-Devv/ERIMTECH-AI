@@ -15,20 +15,20 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-screen-2xl items-center"> {/* Reduced height from h-16 */}
+      <div className="container flex h-14 max-w-screen-2xl items-center">
         <MainNav items={siteConfig.mainNav} />
-        <div className="flex flex-1 items-center justify-end space-x-1 md:space-x-3"> {/* Reduced space-x */}
-          <nav className="flex items-center space-x-1 md:space-x-1"> {/* Reduced space-x */}
+        <div className="flex flex-1 items-center justify-end space-x-2 md:space-x-3"> {/* Adjusted main horizontal spacing */}
+          <nav className="flex items-center space-x-1"> {/* Reduced inter-item spacing */}
             <ThemeToggleButton />
             {!loading && (
               user ? (
                 <>
                   <Link href="/chat"> 
-                    <Button variant="ghost" size="sm" className="text-sm px-2 md:px-3"> {/* Reduced padding */}
+                    <Button variant="ghost" size="sm" className="text-sm px-2 md:px-3">
                       <LayoutDashboard className="mr-1 md:mr-2 h-4 w-4" /> <span className="hidden sm:inline">Dashboard</span>
                     </Button>
                   </Link>
-                  <Button variant="outline" size="sm" onClick={signOut} className="text-sm px-2 md:px-3">  {/* Reduced padding */}
+                  <Button variant="outline" size="sm" onClick={signOut} className="text-sm px-2 md:px-3">
                      <LogOut className="mr-1 md:mr-2 h-4 w-4" /> <span className="hidden sm:inline">Sign Out</span>
                   </Button>
                 </>
@@ -51,4 +51,3 @@ export function SiteHeader() {
     </header>
   )
 }
-

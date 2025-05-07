@@ -6,7 +6,7 @@ import Link from "next/link"
 import type { NavItem } from "@/config/site"
 import { siteConfig } from "@/config/site"
 import { cn } from "@/lib/utils"
-import { Bot } from "lucide-react" // Example Icon
+// Removed Bot import: import { Bot } from "lucide-react" 
 
 interface MainNavProps {
   items?: NavItem[]
@@ -16,7 +16,7 @@ export function MainNav({ items }: MainNavProps) {
   return (
     <div className="flex gap-4 md:gap-8">
       <Link href="/" className="flex items-center space-x-2">
-        <Bot className="h-8 w-8 text-primary" />
+        {/* <Bot className="h-8 w-8 text-primary" /> Removed Bot Icon */}
         <span className="inline-block font-orbitron text-xl font-bold">{siteConfig.name}</span>
       </Link>
       {items?.length ? (
@@ -41,4 +41,3 @@ export function MainNav({ items }: MainNavProps) {
     </div>
   )
 }
-
