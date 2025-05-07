@@ -31,7 +31,7 @@ export function CallToActionSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="w-full py-8 md:py-12 lg:py-16 bg-gradient-to-br from-background to-secondary/30 scroll-animation">
+    <section ref={sectionRef} className="w-full py-6 md:py-8 lg:py-10 bg-gradient-to-br from-background to-secondary/30 scroll-animation">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-6 text-center glassmorphic p-8 md:p-10 lg:p-12 rounded-xl shadow-2xl">
           <Rocket className="h-16 w-16 text-primary animate-pulse" />
@@ -58,3 +58,4 @@ export function CallToActionSection() {
     </section>
   );
 }
+
