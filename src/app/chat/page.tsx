@@ -22,6 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import 'highlight.js/styles/github-dark.css'; // Import a code highlighting theme
+import hljs from 'highlight.js/lib/core';
+import javascript from 'highlight.js/lib/languages/javascript';
+import python from 'highlight.js/lib/languages/python';
+
+
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('python', python);
 
 interface Message {
   id: string;
@@ -72,6 +81,9 @@ export default function ChatPage() {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
+
+    // Highlight code blocks on mount and when messages change
+    hljs.highlightAll();
   }, [messages]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +132,7 @@ export default function ChatPage() {
           break;
         case 'code_explanation':
           aiResponse = await generateCodeExplanation({ code: codeInput, language: codeLanguage });
-          addMessage(aiResponse.explanation, 'ai', 'text'); // Or 'code' if we want to display original code too
+          addMessage(aiResponse.explanation, 'ai', 'code', { language: codeLanguage, code: aiResponse.explanation });
           break;
         case 'image_analysis':
           if (!file) throw new Error("No image file provided for analysis.");
@@ -214,7 +226,9 @@ export default function ChatPage() {
                       {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1" />}
                       {message.type === 'code' && message.data?.code ? (
                         <div className="relative">
-                          <pre className="bg-muted p-2 rounded-md overflow-x-auto text-sm my-1 whitespace-pre-wrap"><code className={`language-${message.data.language}`}>{message.data.code}</code></pre>
+                          <pre className="bg-muted p-2 rounded-md overflow-x-auto text-sm my-1 whitespace-pre-wrap">
+                            <code className={`language-${message.data.language}`} dangerouslySetInnerHTML={{ __html: hljs.highlight(message.data.code, { language: message.data.language }).value }} />
+                          </pre>
                           <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => copyToClipboard(message.data.code)}>
                             <Copy className="h-4 w-4" />
                             <span className="sr-only">Copy code</span>
@@ -344,3 +358,4 @@ export default function ChatPage() {
     </div>
   );
 }
+
