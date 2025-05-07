@@ -1,3 +1,4 @@
+
 "use client";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,7 @@ export function PricingSection() {
   }, []);
   
   return (
-    <section id="pricing" ref={sectionRef} className="w-full py-6 md:py-8 lg:py-10 bg-background scroll-animation">
+    <section id="pricing" ref={sectionRef} className="w-full pt-2 md:pt-3 lg:pt-4 pb-6 md:pb-8 lg:pb-10 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
           <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Access Tiers</div>
@@ -141,4 +142,3 @@ export function PricingSection() {
     </section>
   );
 }
-

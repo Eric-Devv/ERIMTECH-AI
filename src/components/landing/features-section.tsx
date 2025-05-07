@@ -1,3 +1,4 @@
+
 "use client";
 import { Bot, Code, ImageIcon, Mic, Film, Link2, ShieldCheck, Users, TerminalSquare, PlayCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,7 +87,7 @@ export function FeaturesSection() {
   }, []);
   
   return (
-    <section id="features" ref={sectionRef} className="w-full py-6 md:py-8 lg:py-10 bg-background scroll-animation">
+    <section id="features" ref={sectionRef} className="w-full pt-6 md:pt-8 lg:pt-10 pb-2 md:pb-3 lg:pb-4 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
           <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Key Features</div>
@@ -128,4 +129,3 @@ export function FeaturesSection() {
     </section>
   );
 }
-
