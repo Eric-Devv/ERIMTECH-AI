@@ -6,7 +6,7 @@ import { CallToActionSection } from '@/components/landing/cta-section';
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center space-y-10 md:space-y-14 lg:space-y-18 overflow-x-hidden">
+    <div className="flex flex-col items-center justify-center space-y-8 md:space-y-12 lg:space-y-16">
       <HeroSection />
       <FeaturesSection />
       {/* <TestimonialsSection /> */} {/* Removed */}
