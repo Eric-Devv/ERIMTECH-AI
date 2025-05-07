@@ -236,7 +236,10 @@ export default function ChatPage() {
           // Using generateCodeExplanation for structured code output for now
           aiResponse = await generateCodeExplanation({ code: generationPrompt, language: codeLanguage }); 
           responseType = 'code';
-          responseData = { language: codeLanguage, code: aiResponse.explanation }; // Assuming explanation IS the code
+          // The actual code might be embedded within the explanation. For direct code output,
+          // the AI flow would need to return a specific field for just the code.
+          // Here, we assume the explanation IS or CONTAINS the code.
+          responseData = { language: codeLanguage, code: aiResponse.explanation }; 
           addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, responseData, 'code_generation');
           break;
         case 'code_explanation':
@@ -364,9 +367,11 @@ export default function ChatPage() {
                 <span className="sr-only">Copy code</span>
               </Button>
             </div>
-            <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
-              <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
-            </pre>
+            <ScrollArea className="max-h-[400px]"> {/* Added ScrollArea for vertical scrolling of long code blocks */}
+              <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
+                <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+              </pre>
+            </ScrollArea>
           </div>
         );
       } catch (error) {
@@ -396,10 +401,12 @@ export default function ChatPage() {
 
 
   const renderMessageContent = (message: Message) => {
+    // For AI messages of specified types, use parseAndHighlight
     if (message.sender === 'ai' && (message.type === 'text' || message.type === 'code_explanation' || message.type === 'url_analysis' || message.type === 'video_summary' || message.type === 'audio_transcription')) {
       const contentParts = parseAndHighlight(message.text, message.data?.language);
       return <div className="text-sm whitespace-pre-wrap leading-relaxed">{contentParts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>;
     }
+    // For specific 'code' type messages (potentially from code generation if it returns just code)
     if (message.type === 'code' && message.data?.code) {
       const language = getLanguageForHighlighting(message.data.language);
       const highlightedCode = hljs.highlight(message.data.code, { language, ignoreIllegals: true }).value;
@@ -428,6 +435,7 @@ export default function ChatPage() {
         </>
       );
     }
+    // Default for user messages and other AI messages not covered above
     return <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>;
   };
 
@@ -435,19 +443,19 @@ export default function ChatPage() {
     <div className="flex h-[calc(100vh-5rem)]"> {/* Adjusted height for header */}
       {/* Sidebar */}
       <div className={cn(
-        "bg-muted/50 transition-all duration-300 ease-in-out flex flex-col border-r border-border/50",
-        sidebarOpen ? "w-72 p-3" : "w-0 p-0 opacity-0 hidden md:block md:w-16 md:p-2 md:opacity-100"
+        "bg-muted/30 transition-all duration-300 ease-in-out flex flex-col border-r border-border/50", // Slightly less opaque sidebar
+        sidebarOpen ? "w-72 p-2 md:p-3" : "w-0 p-0 opacity-0 hidden md:block md:w-16 md:p-2 md:opacity-100"
       )}>
         {sidebarOpen ? (
           <>
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex justify-between items-center mb-2 md:mb-3">
               <h2 className="text-lg font-orbitron text-primary">Conversations</h2>
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="md:hidden">
                 <SidebarClose className="h-5 w-5" />
               </Button>
             </div>
             <Select onValueChange={(value) => handleStartNewConversation(value as AiFeature)}>
-              <SelectTrigger className="w-full h-10 mb-3 glassmorphic focus:ring-primary/50">
+              <SelectTrigger className="w-full h-9 md:h-10 mb-2 md:mb-3 glassmorphic focus:ring-primary/50">
                 <Plus className="h-4 w-4 mr-2" /> New Chat
               </SelectTrigger>
               <SelectContent>
@@ -470,7 +478,7 @@ export default function ChatPage() {
                       if (window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile
                     }}
                     className={cn(
-                      "p-2.5 rounded-lg cursor-pointer transition-colors hover:bg-primary/10",
+                      "p-2 rounded-lg cursor-pointer transition-colors hover:bg-primary/10",
                       activeConversationId === convo.id ? "bg-primary/20 border-primary/50" : "bg-background/30"
                     )}
                   >
@@ -511,7 +519,7 @@ export default function ChatPage() {
             </ScrollArea>
           </>
         ) : ( // Collapsed sidebar for desktop
-          <div className="flex flex-col items-center space-y-3">
+          <div className="flex flex-col items-center space-y-2 md:space-y-3">
              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="mt-1">
                 <SidebarOpen className="h-5 w-5" />
               </Button>
@@ -526,19 +534,19 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background overflow-hidden">
-        <header className="p-3 border-b border-border/50 flex items-center justify-between bg-muted/20">
+        <header className="p-2 md:p-3 border-b border-border/50 flex items-center justify-between bg-muted/20">
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className={cn(sidebarOpen && "md:hidden")}>
                 {sidebarOpen ? <CircleArrowLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           <div className="flex items-center gap-2">
-            {activeConversation && React.cloneElement(featureConfig[activeConversation.feature].icon, {className: "h-6 w-6 text-primary"})}
-            <h2 className="text-lg font-orbitron text-primary truncate">
+            {activeConversation && React.cloneElement(featureConfig[activeConversation.feature].icon, {className: "h-5 w-5 md:h-6 md:w-6 text-primary"})}
+            <h2 className="text-md md:text-lg font-orbitron text-primary truncate">
               {activeConversation ? activeConversation.name : "ERIMTECH AI"}
             </h2>
           </div>
           <Select value={currentFeature} onValueChange={(value) => handleStartNewConversation(value as AiFeature)}>
-            <SelectTrigger className="w-auto md:w-[220px] h-9 text-xs glassmorphic focus:ring-primary/50">
-              <div className="flex items-center gap-1.5"> {currentFeatureDetails.icon} <span className="hidden md:inline">{currentFeatureDetails.name}</span></div>
+            <SelectTrigger className="w-auto md:w-[200px] h-8 md:h-9 text-xs glassmorphic focus:ring-primary/50">
+              <div className="flex items-center gap-1.5"> {React.cloneElement(currentFeatureDetails.icon, {className:"h-4 w-4"})} <span className="hidden md:inline">{currentFeatureDetails.name}</span></div>
             </SelectTrigger>
             <SelectContent>
               {Object.entries(featureConfig).map(([key, { icon, name }]) => (
@@ -552,55 +560,55 @@ export default function ChatPage() {
           </Select>
         </header>
 
-        <ScrollArea className="flex-grow p-4 space-y-6" ref={scrollAreaRef}>
+        <ScrollArea className="flex-grow p-3 md:p-4 space-y-3 md:space-y-4" ref={scrollAreaRef}>
           {(!activeConversation || activeConversation.messages.length === 0) && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <MessageSquare className="h-16 w-16 mb-4 text-primary/70" />
-              <p className="text-lg">Start a new conversation</p>
+              <MessageSquare className="h-12 w-12 md:h-16 md:w-16 mb-3 md:mb-4 text-primary/70" />
+              <p className="text-md md:text-lg">Start a new conversation</p>
               <p className="text-sm">Select a feature or choose from your past chats.</p>
             </div>
           )}
           {activeConversation?.messages.map(message => (
-            <div key={message.id} className={`flex flex-col mb-4 ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
+            <div key={message.id} className={`flex flex-col mb-3 ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={cn(
-                  "flex items-start gap-2.5 w-full",
+                  "flex items-start gap-2 w-full",
                   message.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}>
                 {message.sender === 'ai' && (
-                  <Avatar className="h-8 w-8 shrink-0">
+                  <Avatar className="h-7 w-7 md:h-8 md:w-8 shrink-0">
                     <AvatarImage src="/logo.svg" alt="AI Avatar" />
-                    <AvatarFallback><Bot /></AvatarFallback>
+                    <AvatarFallback><Bot className="h-4 w-4 md:h-5 md:w-5"/></AvatarFallback>
                   </Avatar>
                 )}
                 <Card 
                   className={cn(
-                    "p-3 rounded-2xl shadow-md relative max-w-[85%] md:max-w-[75%]",
+                    "p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-md relative max-w-[90%] md:max-w-[80%]",
                     message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted text-foreground rounded-bl-none',
                      (message.type === 'code' || (message.text && message.text.includes("```"))) ? 'w-full' : '' // Make code blocks take more width
                   )}
                 >
-                  {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1 mb-0.5" />}
+                  {message.type === 'error' && <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-destructive inline mr-1 mb-0.5" />}
                   {renderMessageContent(message)}
-                  <p className="text-xs text-muted-foreground/60 mt-1.5 text-right">
+                  <p className="text-xs text-muted-foreground/60 mt-1 text-right">
                     {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </Card>
                 {message.sender === 'user' && (
-                  <Avatar className="h-8 w-8 shrink-0">
+                  <Avatar className="h-7 w-7 md:h-8 md:w-8 shrink-0">
                     <AvatarImage src="" alt="User Avatar"/> {/* Placeholder for user avatar if available */}
-                    <AvatarFallback><User /></AvatarFallback>
+                    <AvatarFallback><User className="h-4 w-4 md:h-5 md:w-5"/></AvatarFallback>
                   </Avatar>
                 )}
               </div>
             </div>
           ))}
           {isLoading && activeConversationId && (
-            <div className="flex items-start gap-2.5 max-w-[85%] md:max-w-[75%]">
-              <Avatar className="h-8 w-8 shrink-0">
+            <div className="flex items-start gap-2 max-w-[90%] md:max-w-[80%]">
+              <Avatar className="h-7 w-7 md:h-8 md:w-8 shrink-0">
                 <AvatarImage src="/logo.svg" alt="AI Avatar" />
-                <AvatarFallback><Bot /></AvatarFallback>
+                <AvatarFallback><Bot className="h-4 w-4 md:h-5 md:w-5"/></AvatarFallback>
               </Avatar>
-              <div className="p-3 rounded-2xl shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-2">
+              <div className="p-2.5 md:p-3 rounded-xl md:rounded-2xl shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-2">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">ERIMTECH AI is thinking...</p>
               </div>
@@ -608,21 +616,21 @@ export default function ChatPage() {
           )}
         </ScrollArea>
 
-        <footer className="p-3 border-t border-border/50 bg-muted/20">
-          <form onSubmit={handleSubmit} className="space-y-2">
+        <footer className="p-2 md:p-3 border-t border-border/50 bg-muted/20">
+          <form onSubmit={handleSubmit} className="space-y-1.5 md:space-y-2">
             {currentFeatureDetails.requiresCodeInput && (
-              <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+              <div className="grid grid-cols-[1fr_auto] gap-1.5 md:gap-2 items-end">
                 <Textarea
                   id="codeInput"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="min-h-[80px] max-h-[200px] text-sm glassmorphic focus:ring-primary/50 resize-y"
+                  className="min-h-[60px] md:min-h-[80px] max-h-[150px] md:max-h-[200px] text-sm glassmorphic focus:ring-primary/50 resize-y"
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
                 <Select value={codeLanguage} onValueChange={setCodeLanguage} disabled={isLoading || !activeConversationId}>
-                  <SelectTrigger className="w-auto md:w-[150px] h-10 text-xs glassmorphic focus:ring-primary/50">
+                  <SelectTrigger className="w-auto md:w-[140px] h-9 md:h-10 text-xs glassmorphic focus:ring-primary/50">
                     <Code className="h-3.5 w-3.5 mr-1 text-muted-foreground" /> <span className="truncate">{codeLanguage}</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -641,16 +649,16 @@ export default function ChatPage() {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder={currentFeature === 'chat' ? "Optional: Enter URL for context..." : currentFeatureDetails.placeholder}
-                    className="h-10 text-sm glassmorphic focus:ring-primary/50"
+                    className="h-9 md:h-10 text-sm glassmorphic focus:ring-primary/50"
                     disabled={isLoading || !activeConversationId}
                 />
             )}
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5 md:space-x-2">
               {currentFeatureDetails.requiresFileUpload && (
                 <>
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept={currentFeature === 'image_analysis' ? 'image/*' : (currentFeature === 'audio_transcription' ? 'audio/*' : '*/*')} disabled={!activeConversationId} />
-                  <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-10 w-10 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
+                  <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-9 w-9 md:h-10 md:w-10 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
                     <Paperclip className="h-4 w-4" />
                     <span className="sr-only">Attach file</span>
                   </Button>
@@ -662,7 +670,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow min-h-[40px] max-h-[150px] text-sm glassmorphic focus:ring-primary/50 resize-y"
+                  className="flex-grow min-h-[36px] md:min-h-[40px] max-h-[120px] md:max-h-[150px] text-sm glassmorphic focus:ring-primary/50 resize-y"
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -673,7 +681,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow h-10 text-sm glassmorphic focus:ring-primary/50"
+                  className="flex-grow h-9 md:h-10 text-sm glassmorphic focus:ring-primary/50"
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -685,19 +693,19 @@ export default function ChatPage() {
                       value={input} // Use main input for general comments with these features
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Add a comment or specific instructions..."
-                      className="flex-grow h-10 text-sm glassmorphic focus:ring-primary/50"
+                      className="flex-grow h-9 md:h-10 text-sm glassmorphic focus:ring-primary/50"
                       disabled={isLoading || !activeConversationId}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                   />
               )}
 
 
-              <Button type="submit" size="icon" disabled={isLoading || (!input && !file && !urlInput && !codeInput) || !activeConversationId} className="h-10 w-10 bg-primary hover:bg-primary/90 disabled:bg-muted">
+              <Button type="submit" size="icon" disabled={isLoading || (!input && !file && !urlInput && !codeInput) || !activeConversationId} className="h-9 w-9 md:h-10 md:w-10 bg-primary hover:bg-primary/90 disabled:bg-muted">
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 <span className="sr-only">Send</span>
               </Button>
             </div>
-            {file && <p className="text-xs text-muted-foreground pt-1">Selected: {file.name}</p>}
+            {file && <p className="text-xs text-muted-foreground pt-0.5 md:pt-1">Selected: {file.name}</p>}
           </form>
         </footer>
       </div>
