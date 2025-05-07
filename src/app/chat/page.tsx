@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import 'highlight.js/styles/github-dark.css';
+import * as hljs from 'highlight.js';
 
 interface Message {
   id: string;
@@ -77,14 +78,7 @@ export default function ChatPage() {
 
     // Highlight code blocks on mount and when messages change
     const highlight = async () => {
-      try {
-        const hljs = (await import('highlight.js')).default;
-        hljs.registerLanguage('javascript', require('highlight.js/lib/languages/javascript'));
-        hljs.registerLanguage('python', require('highlight.js/lib/languages/python'));
-        hljs.highlightAll();
-      } catch (error) {
-        console.error("Failed to import highlight.js", error);
-      }
+      hljs.highlightAll();
     };
     highlight();
   }, [messages]);
@@ -223,14 +217,14 @@ export default function ChatPage() {
                   <div className="flex items-start space-x-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={message.sender === 'user' ? undefined : '/logo.svg'} /> {/* Replace with actual user avatar if available */}
-                      <AvatarFallback>{message.sender === 'user' ? <User /> : <Bot />}</AvatarFallback>
+                      <AvatarFallback>{message.sender === 'user' ? <Bot /> : <Bot />}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1" />}
                       {message.type === 'code' && message.data?.code ? (
                         <div className="relative">
                           <pre className="bg-muted p-2 rounded-md overflow-x-auto text-sm my-1 whitespace-pre-wrap">
-                            <code className={`language-${message.data.language}`} dangerouslySetInnerHTML={{ __html: message.data.code }} />
+                            <code className={`language-${message.data.language}`} dangerouslySetInnerHTML={{ __html: hljs.highlight(message.data.code, {language: message.data.language}).value }} />
                           </pre>
                           <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => copyToClipboard(message.data.code)}>
                             <Copy className="h-4 w-4" />
