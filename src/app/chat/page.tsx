@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
@@ -82,6 +83,16 @@ export default function ChatPage() {
     };
     highlight();
   }, [messages]);
+
+  useEffect(() => {
+      // Initialize highlight.js after the component has mounted to avoid hydration issues.
+      const initHighlighting = async () => {
+          hljs.highlightAll();
+      };
+
+      initHighlighting();
+  }, []);
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
