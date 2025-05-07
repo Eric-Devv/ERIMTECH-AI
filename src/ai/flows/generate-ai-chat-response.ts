@@ -68,10 +68,16 @@ const generateAiChatResponsePrompt = ai.definePrompt({
 
 {{#if url}}
 A URL has been provided by the user: {{{url}}}.
-If understanding the content of this URL is necessary to answer the user's prompt, use the 'getContentFromUrl' tool to fetch its content. Then, incorporate the fetched content into your response as needed. Do not call the tool if the URL content is not directly relevant to the user's question.
+If understanding the content of this URL is relevant to the user's prompt, use the 'getContentFromUrl' tool to fetch its content.
+- If the tool successfully fetches content, use this content to inform your response.
+- If the tool returns an error message (e.g., "Error fetching content..."), acknowledge this error in your response. For example, you could say: "I encountered an error trying to access the URL: [tool error message]. However, I can still try to answer your question based on other information." Then proceed to answer the user's original prompt as best as you can without the URL content.
+- If the URL is not relevant or you decide not to use the tool, simply proceed to answer the user's prompt.
 {{/if}}
 
-User prompt: {{{prompt}}}`,
+User prompt: {{{prompt}}}
+
+Please formulate a helpful and informative response to the user's prompt. If you cannot fully answer, explain why or provide partial information if possible.
+Ensure your final output is structured as a JSON object with a single key "response" containing your textual answer. For example: {"response": "Your detailed answer here."}`,
 });
 
 const generateAiChatResponseFlow = ai.defineFlow(
