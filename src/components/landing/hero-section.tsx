@@ -1,8 +1,9 @@
+
 "use client";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, PlayCircle } from 'lucide-react';
-import Image from 'next/image';
+import { HeroSlideshow } from '@/components/landing/hero-slideshow';
 import { useEffect, useRef } from 'react';
 
 export function HeroSection() {
@@ -32,12 +33,12 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="w-full py-6 md:py-10 lg:py-12 scroll-animation">
+    <section ref={sectionRef} className="w-full py-8 md:py-10 lg:py-12 scroll-animation">
       <div className="container px-4 md:px-6">
-        <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
+        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
           <div className="flex flex-col justify-center space-y-4">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-orbitron font-bold tracking-tighter sm:text-5xl xl:text-6xl xl:leading-tight holographic-text">
+            <div className="space-y-3">
+              <h1 className="text-4xl font-orbitron font-bold tracking-tighter sm:text-5xl xl:text-6xl/snug holographic-text">
                 Welcome to the Future with ERIMTECH AI
               </h1>
               <p className="max-w-[600px] text-muted-foreground md:text-xl">
@@ -57,24 +58,11 @@ export function HeroSection() {
               </Link>
             </div>
           </div>
-          <div className="relative mx-auto aspect-video overflow-hidden rounded-xl sm:w-full lg:order-last lg:aspect-square glassmorphic">
-            <Image
-              src="https://picsum.photos/800/600?random=1"
-              alt="AI Demonstration Preview"
-              layout="fill"
-              objectFit="cover"
-              className="opacity-70 hover:opacity-100 transition-opacity duration-500"
-              data-ai-hint="futuristic technology"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-background/50 to-transparent"></div>
-            <div className="absolute bottom-4 left-4 text-primary-foreground p-2 rounded-md bg-black/30 backdrop-blur-sm">
-              <h3 className="font-orbitron text-lg">AI in Action</h3>
-              <p className="text-xs">See a glimpse of what's possible.</p>
-            </div>
+          <div className="lg:order-last">
+            <HeroSlideshow />
           </div>
         </div>
       </div>
     </section>
   );
 }
-

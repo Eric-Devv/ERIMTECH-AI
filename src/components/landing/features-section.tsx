@@ -87,9 +87,9 @@ export function FeaturesSection() {
   }, []);
   
   return (
-    <section id="features" ref={sectionRef} className="w-full pt-6 md:pt-8 lg:pt-10 pb-2 md:pb-3 lg:pb-4 bg-background scroll-animation">
+    <section id="features" ref={sectionRef} className="w-full py-8 md:py-12 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
+        <div className="flex flex-col items-center justify-center space-y-3 text-center mb-8">
           <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Key Features</div>
           <h2 className="text-3xl font-orbitron font-bold tracking-tighter sm:text-5xl">Unlock a New Dimension of AI</h2>
           <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
@@ -111,17 +111,17 @@ export function FeaturesSection() {
         </div>
         <div id="features-video" className="mt-10 md:mt-12 scroll-animation">
           <h3 className="text-2xl font-orbitron font-bold tracking-tighter sm:text-3xl text-center mb-6">See ERIMTECH AI in Action</h3>
-          <div className="aspect-video rounded-xl overflow-hidden glassmorphic relative">
+          <div className="aspect-video rounded-xl overflow-hidden glassmorphic relative group">
              <Image
                 src="https://picsum.photos/1280/720?random=2"
                 alt="ERIMTECH AI Demo Video Thumbnail"
                 layout="fill"
                 objectFit="cover"
-                className="opacity-80 hover:opacity-100 transition-opacity duration-500 cursor-pointer"
+                className="opacity-80 group-hover:opacity-100 transition-opacity duration-500 cursor-pointer"
                 data-ai-hint="ai interface"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <PlayCircle className="h-20 w-20 text-primary-foreground opacity-70 hover:opacity-100 transition-opacity cursor-pointer" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors duration-300">
+                <PlayCircle className="h-16 w-16 md:h-20 md:w-20 text-primary-foreground opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300 cursor-pointer" />
               </div>
           </div>
         </div>

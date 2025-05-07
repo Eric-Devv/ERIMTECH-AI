@@ -90,9 +90,9 @@ export function PricingSection() {
   }, []);
   
   return (
-    <section id="pricing" ref={sectionRef} className="w-full pt-2 md:pt-3 lg:pt-4 pb-6 md:pb-8 lg:pb-10 bg-background scroll-animation">
+    <section id="pricing" ref={sectionRef} className="w-full py-8 md:py-12 bg-background scroll-animation">
       <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center mb-8">
+        <div className="flex flex-col items-center justify-center space-y-3 text-center mb-8">
           <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm holographic-text !bg-clip-text !text-transparent">Access Tiers</div>
           <h2 className="text-3xl font-orbitron font-bold tracking-tighter sm:text-5xl">Choose Your Path to the Future</h2>
           <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
@@ -113,7 +113,7 @@ export function PricingSection() {
                   <span className="text-4xl font-bold holographic-text !bg-clip-text !text-transparent">{plan.price}</span>
                   {plan.period && <span className="text-muted-foreground ml-1">{plan.period}</span>}
                 </div>
-                <CardDescription className="pt-2">{plan.description}</CardDescription>
+                <CardDescription className="pt-2 min-h-[60px]">{plan.description}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow">
                 <ul className="space-y-3">
