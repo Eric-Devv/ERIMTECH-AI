@@ -1,3 +1,4 @@
+
 export type SiteConfig = {
   name: string;
   description: string;
@@ -33,10 +34,6 @@ export const siteConfig: SiteConfig = {
     {
       title: "Features",
       href: "/#features",
-    },
-    {
-      title: "Pricing",
-      href: "/#pricing",
     },
     {
       title: "Docs",
