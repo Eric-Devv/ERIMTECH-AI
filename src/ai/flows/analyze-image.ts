@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {analyzeImage as replicateAnalyzeImage} from '@/services/replicate';
 
 const AnalyzeImageInputSchema = z.object({
   photoDataUri: z
@@ -49,19 +48,11 @@ const analyzeImageFlow = ai.defineFlow(
     outputSchema: AnalyzeImageOutputSchema,
   },
   async input => {
-    // Call Replicate API to analyze the image
-    const replicateResult = await replicateAnalyzeImage(input.photoDataUri);
-
-    // If Replicate provides a description, use it. Otherwise, use the LLM to create it.
-    if (replicateResult?.description) {
-      return {
-        analysisResult: {
-          description: replicateResult.description,
-        },
-      };
-    } else {
-      const {output} = await analyzeImagePrompt(input);
-      return output!;
+    const {output} = await analyzeImagePrompt(input);
+    if (!output) {
+      throw new Error('Image analysis failed to produce an output.');
     }
+    return output;
   }
 );
+

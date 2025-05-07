@@ -30,7 +30,7 @@ export async function generateAiChatResponse(input: GenerateAiChatResponseInput)
 const getContentFromUrl = ai.defineTool(
   {
     name: 'getContentFromUrl',
-    description: 'Fetches the content from a given URL.',
+    description: 'Fetches the plain text content from a given URL. Use this tool if a URL is provided and you need to access its content to answer the user prompt.',
     inputSchema: z.object({
       url: z.string().describe('The URL to fetch content from.'),
     }),
@@ -40,9 +40,18 @@ const getContentFromUrl = ai.defineTool(
     try {
       const response = await fetch(input.url);
       if (!response.ok) {
-        throw new Error(`Failed to fetch content from URL: ${input.url}`);
+        // Try to get more specific error message from the response if possible
+        let errorBody = '';
+        try {
+          errorBody = await response.text();
+        } catch (e) {}
+        console.error(`Failed to fetch content from URL: ${input.url}. Status: ${response.status}. Body: ${errorBody}`);
+        return `Error fetching content from ${input.url}: HTTP status ${response.status}. ${errorBody ? 'Details: ' + errorBody.substring(0,100) : ''}`;
       }
-      return await response.text();
+      const textContent = await response.text();
+      // Basic HTML stripping, might need a more robust solution for complex pages
+      const plainText = textContent.replace(/<[^>]+>/g, ' ').replace(/\s\s+/g, ' ').trim();
+      return plainText.substring(0, 5000); // Limit content length
     } catch (error: any) {
       console.error(`Error fetching content from URL: ${input.url}`, error);
       return `Error fetching content from ${input.url}: ${error.message}`;
@@ -57,13 +66,12 @@ const generateAiChatResponsePrompt = ai.definePrompt({
   output: {schema: GenerateAiChatResponseOutputSchema},
   prompt: `You are a helpful AI assistant. Respond to the user's prompt.
 
-  {{#if url}}
-  The user has provided a URL. Use the getContentFromUrl tool to get the content from the URL and include it in your response.
-  URL: {{{url}}}
-  Content: {{ await getContentFromUrl url=url }}
-  {{/if}}
+{{#if url}}
+A URL has been provided by the user: {{{url}}}.
+If understanding the content of this URL is necessary to answer the user's prompt, use the 'getContentFromUrl' tool to fetch its content. Then, incorporate the fetched content into your response as needed. Do not call the tool if the URL content is not directly relevant to the user's question.
+{{/if}}
 
-  Prompt: {{{prompt}}}`,
+User prompt: {{{prompt}}}`,
 });
 
 const generateAiChatResponseFlow = ai.defineFlow(
@@ -74,6 +82,9 @@ const generateAiChatResponseFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await generateAiChatResponsePrompt(input);
-    return output!;
+    if (!output) {
+      throw new Error('AI chat response generation failed to produce an output.');
+    }
+    return output;
   }
 );

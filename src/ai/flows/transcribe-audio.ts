@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {transcribeAudio as transcribeAudioService} from '@/services/whisper';
 
 const TranscribeAudioInputSchema = z.object({
   audioDataUri: z
@@ -45,14 +44,10 @@ const transcribeAudioFlow = ai.defineFlow(
     outputSchema: TranscribeAudioOutputSchema,
   },
   async input => {
-    // First, convert the data URI to a URL that the Whisper API can use.
-    // For now, just pass the data URI directly to the transcribeAudioService.
-    // In the future, we might want to upload the audio to Firebase Storage and pass the URL to the transcribeAudioService.
-
-    // Call the transcribeAudio service function to transcribe the audio.
-    const transcriptionResult = await transcribeAudioService(input.audioDataUri);
-
-    // Return the transcription.
-    return {transcription: transcriptionResult.text};
+    const {output} = await transcribeAudioPrompt(input);
+     if (!output) {
+      throw new Error('Audio transcription failed to produce an output.');
+    }
+    return output;
   }
 );
