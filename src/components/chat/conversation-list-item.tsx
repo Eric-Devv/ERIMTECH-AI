@@ -35,17 +35,19 @@ export function ConversationListItem({
   onDelete,
 }: ConversationListItemProps) {
   const [formattedTimestamp, setFormattedTimestamp] = useState<string | null>(null);
+  const FeatureIcon = featureConfig[convo.feature].icon;
+
 
   useEffect(() => {
     // Format the timestamp on the client side to avoid hydration mismatch
-    setFormattedTimestamp(new Date(convo.timestamp).toLocaleDateString());
+    setFormattedTimestamp(new Date(convo.timestamp).toLocaleDateString(undefined, {day: '2-digit', month: '2-digit', year: 'numeric'}));
   }, [convo.timestamp]);
 
   return (
     <Card
       onClick={onClick}
       className={cn(
-        "p-2 rounded-lg cursor-pointer transition-colors hover:bg-primary/10",
+        "p-1.5 rounded-md cursor-pointer transition-colors hover:bg-primary/10", // Reduced padding
         isActive ? "bg-primary/20 border-primary/50" : "bg-background/30"
       )}
     >
@@ -56,52 +58,52 @@ export function ConversationListItem({
             onChange={(e) => onNameChange(e.target.value)}
             onBlur={() => onSaveName(convo.id)}
             onKeyDown={(e) => e.key === 'Enter' && onSaveName(convo.id)}
-            className="h-7 text-sm flex-grow mr-1"
+            className="h-6 text-xs flex-grow mr-0.5" // Reduced height and text size
             autoFocus
-            onClick={(e) => e.stopPropagation()} // Prevent card click when editing name
+            onClick={(e) => e.stopPropagation()} 
           />
         ) : (
-          <span className="text-sm font-medium truncate flex-grow">{convo.name}</span>
+          <span className="text-xs font-medium truncate flex-grow">{convo.name}</span> // Reduced text size
         )}
         <div className="flex items-center shrink-0">
           {!isEditing && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5" // Reduced size
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(convo.id);
               }}
             >
-              <Edit2 className="h-3.5 w-3.5" />
+              <Edit2 className="h-3 w-3" /> {/* Reduced icon size */}
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:text-destructive"
+            className="h-5 w-5 hover:text-destructive" // Reduced size
             onClick={(e) => {
               e.stopPropagation();
               onDelete(convo.id);
             }}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3" /> {/* Reduced icon size */}
           </Button>
         </div>
       </div>
-      <div className="flex items-center justify-between mt-1">
+      <div className="flex items-center justify-between mt-0.5"> {/* Reduced margin */}
         <div className="flex items-center text-xs text-muted-foreground">
-          {React.cloneElement(featureConfig[convo.feature].icon, { className: "h-3.5 w-3.5 mr-1" })}
+          <FeatureIcon className="h-3 w-3 mr-0.5" /> {/* Reduced icon size and margin */}
           {featureConfig[convo.feature].name}
         </div>
-        {/* Render timestamp only after it's formatted on client */}
         {formattedTimestamp ? (
             <p className="text-xs text-muted-foreground">{formattedTimestamp}</p>
         ) : (
-            <p className="text-xs text-muted-foreground">...</p> // Placeholder or empty string
+            <p className="text-xs text-muted-foreground">...</p> 
         )}
       </div>
     </Card>
   );
 }
+

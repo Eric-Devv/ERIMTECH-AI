@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Paperclip, Send, Mic, Bot, User, Image as ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2, Copy, CornerDownLeft, Settings2, Brain, Palette, Languages, Plus, Trash2, Edit2, CircleArrowLeft, Menu, SidebarClose, SidebarOpen, MessageSquare, X, GripVertical } from 'lucide-react';
+import { Paperclip, Send, Mic, Bot, User, ImageIcon, Film, Code, LinkIcon, AlertTriangle, Sparkles, Loader2, Copy, Settings2, Brain, Palette, Languages, Plus, Trash2, Edit2, CircleArrowLeft, Menu, SidebarClose, SidebarOpen, MessageSquare, X, GripVertical } from 'lucide-react';
 import { generateAiChatResponse } from '@/ai/flows/generate-ai-chat-response';
 import { generateCodeExplanation } from '@/ai/flows/generate-code-explanation';
 import { summarizeVideo } from '@/ai/flows/summarize-video';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { analyzeImage } from '@/ai/flows/analyze-image';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -92,14 +91,14 @@ export interface Conversation {
   timestamp: Date;
 }
 
-export const featureConfig: Record<AiFeature, { icon: JSX.Element, name: string, placeholder: string, requiresFileUpload?: boolean, requiresUrl?: boolean, requiresCodeInput?: boolean, inputType?: 'text' | 'textarea' | 'url' | 'file', defaultLanguage?: string }> = {
-  chat: { icon: <Brain className="h-5 w-5" />, name: "AI Chat", placeholder: "Message ERIMTECH AI...", inputType: 'textarea' },
-  code_generation: { icon: <Code className="h-5 w-5" />, name: "Generate Code", placeholder: "Describe the code you want to generate...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'python' },
-  code_explanation: { icon: <Languages className="h-5 w-5" />, name: "Explain Code", placeholder: "Paste code here to get an explanation...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'javascript' },
-  image_analysis: { icon: <ImageIcon className="h-5 w-5" />, name: "Analyze Image", placeholder: "Upload an image to analyze...", requiresFileUpload: true, inputType: 'file' },
-  audio_transcription: { icon: <Mic className="h-5 w-5" />, name: "Transcribe Audio", placeholder: "Upload an audio file to transcribe...", requiresFileUpload: true, inputType: 'file' },
-  video_summarization: { icon: <Film className="h-5 w-5" />, name: "Summarize Video", placeholder: "Enter video URL to summarize...", requiresUrl: true, inputType: 'url' },
-  url_analysis: { icon: <LinkIcon className="h-5 w-5" />, name: "Analyze URL", placeholder: "Enter URL to analyze its content...", requiresUrl: true, inputType: 'url' },
+export const featureConfig: Record<AiFeature, { icon: React.ElementType, name: string, placeholder: string, requiresFileUpload?: boolean, requiresUrl?: boolean, requiresCodeInput?: boolean, inputType?: 'text' | 'textarea' | 'url' | 'file', defaultLanguage?: string }> = {
+  chat: { icon: Brain, name: "AI Chat", placeholder: "Message ERIMTECH AI...", inputType: 'textarea' },
+  code_generation: { icon: Code, name: "Generate Code", placeholder: "Describe the code you want to generate...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'python' },
+  code_explanation: { icon: Languages, name: "Explain Code", placeholder: "Paste code here to get an explanation...", requiresCodeInput: true, inputType: 'textarea', defaultLanguage: 'javascript' },
+  image_analysis: { icon: ImageIcon, name: "Analyze Image", placeholder: "Upload an image to analyze...", requiresFileUpload: true, inputType: 'file' },
+  audio_transcription: { icon: Mic, name: "Transcribe Audio", placeholder: "Upload an audio file to transcribe...", requiresFileUpload: true, inputType: 'file' },
+  video_summarization: { icon: Film, name: "Summarize Video", placeholder: "Enter video URL to summarize...", requiresUrl: true, inputType: 'url' },
+  url_analysis: { icon: LinkIcon, name: "Analyze URL", placeholder: "Enter URL to analyze its content...", requiresUrl: true, inputType: 'url' },
 };
 
 const initialConversations: Conversation[] = [
@@ -119,7 +118,7 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Default to open on desktop
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingConversationName, setEditingConversationName] = useState("");
 
@@ -127,9 +126,17 @@ export default function ChatPage() {
     return conversations.find(conv => conv.id === activeConversationId);
   }, [conversations, activeConversationId]);
 
-  const currentFeature = activeConversation?.feature || 'chat';
+  const currentFeature: AiFeature = activeConversation?.feature || 'chat';
   const currentFeatureDetails = featureConfig[currentFeature];
+  const CurrentFeatureIcon = currentFeatureDetails.icon;
   
+  useEffect(() => {
+    // Close sidebar by default on mobile
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
@@ -145,7 +152,8 @@ export default function ChatPage() {
     if (currentFeatureDetails.defaultLanguage) {
       setCodeLanguage(currentFeatureDetails.defaultLanguage);
     }
-  }, [currentFeature, currentFeatureDetails.defaultLanguage]);
+  }, [currentFeature, activeConversationId, currentFeatureDetails.defaultLanguage]);
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -168,9 +176,9 @@ export default function ChatPage() {
     setConversations(prevConvos =>
       prevConvos.map(convo =>
         convo.id === convoId
-          ? { ...convo, messages: [...convo.messages, { id: Date.now().toString(), text, sender, type, data, timestamp: new Date(), feature: featureUsed || convo.feature }] }
+          ? { ...convo, messages: [...convo.messages, { id: Date.now().toString(), text, sender, type, data, timestamp: new Date(), feature: featureUsed || convo.feature }], timestamp: new Date() }
           : convo
-      )
+      ).sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())
     );
   };
 
@@ -232,15 +240,20 @@ export default function ChatPage() {
           break;
         case 'code_generation':
           const generationPrompt = `Generate ${codeLanguage} code for: ${currentCode}. ${currentInput ? `Additional instructions: ${currentInput}` : ''}`;
-          aiResponse = await generateCodeExplanation({ code: generationPrompt, language: codeLanguage }); 
-          responseType = 'code';
-          responseData = { language: codeLanguage, code: aiResponse.explanation }; 
-          addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, responseData, 'code_generation');
+          // For code generation, we might expect the response to be primarily code.
+          // Let's adjust the prompt to the `generateCodeExplanation` which can be repurposed or use a specific code generation flow if available.
+          // Assuming `generateCodeExplanation` can take a generation prompt and return code in its 'explanation' field for now.
+          // Or better, we'd have a dedicated `generateCode` flow.
+          // For this example, let's assume GPT-4 with a good prompt can generate code in markdown.
+          aiResponse = await generateAiChatResponse({ prompt: `Please generate a ${codeLanguage} code snippet that does the following: ${currentCode}. ${currentInput ? `More details: ${currentInput}` : ''}. Output only the code block in markdown format.` });
+          responseType = 'code'; // Custom type to render as code
+          responseData = { language: codeLanguage, code: aiResponse.response }; 
+          addMessageToConversation(activeConversationId, aiResponse.response, 'ai', responseType, responseData, 'code_generation');
           break;
         case 'code_explanation':
-          const explanationPrompt = `${currentInput ? `Regarding this code: ${currentInput}\n\n` : ''}${currentCode}`;
-          aiResponse = await generateCodeExplanation({ code: explanationPrompt, language: codeLanguage });
-          responseType = 'text';
+          const explanationPrompt = `${currentInput ? `Regarding this code: ${currentInput}\n\n` : ''}\`\`\`${codeLanguage}\n${currentCode}\n\`\`\``;
+          aiResponse = await generateCodeExplanation({ code: currentCode, language: codeLanguage }); // Use the original code for explanation
+          responseType = 'text'; // Explanation is text, might contain code blocks handled by parser
           addMessageToConversation(activeConversationId, aiResponse.explanation, 'ai', responseType, { language: codeLanguage, originalCode: currentCode }, 'code_explanation');
           break;
         case 'image_analysis':
@@ -275,8 +288,14 @@ export default function ChatPage() {
       }
     } catch (error: any) {
       console.error("AI Error:", error);
-      addMessageToConversation(activeConversationId, error.message || "An error occurred while processing your request.", 'ai', 'error', undefined, currentFeature);
-      toast({ title: "Error", description: error.message || "Failed to get AI response.", variant: "destructive" });
+      let detailedErrorMessage = error.message || "An error occurred while processing your request.";
+      if (error.cause && typeof error.cause === 'object' && error.cause.message) {
+        detailedErrorMessage += ` Cause: ${error.cause.message}`;
+      } else if (typeof error.cause === 'string') {
+         detailedErrorMessage += ` Cause: ${error.cause}`;
+      }
+      addMessageToConversation(activeConversationId, detailedErrorMessage, 'ai', 'error', undefined, currentFeature);
+      toast({ title: "Error", description: detailedErrorMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
       setFile(null);
@@ -300,7 +319,7 @@ export default function ChatPage() {
 
   const handleStartNewConversation = (feature: AiFeature) => {
     const newConversationId = `${feature}-${Date.now()}`;
-    const newConversationName = `${featureConfig[feature].name} Session ${conversations.filter(c => c.feature === feature).length + 1}`;
+    const newConversationName = `${featureConfig[feature].name} ${conversations.filter(c => c.feature === feature).length + 1}`;
     const newConversation: Conversation = {
       id: newConversationId,
       name: newConversationName,
@@ -308,15 +327,16 @@ export default function ChatPage() {
       feature: feature,
       timestamp: new Date(),
     };
-    setConversations(prev => [newConversation, ...prev]);
+    setConversations(prev => [newConversation, ...prev.sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime())]);
     setActiveConversationId(newConversationId);
-    if (window.innerWidth < 768) setSidebarOpen(false);
+    if (window.innerWidth < 768) setSidebarOpen(false); // Close sidebar on mobile after selection
   };
   
   const handleDeleteConversation = (convoId: string) => {
     setConversations(prev => prev.filter(c => c.id !== convoId));
     if (activeConversationId === convoId) {
-      setActiveConversationId(conversations.length > 1 ? conversations.find(c => c.id !== convoId)?.id || null : null);
+      const remainingConversations = conversations.filter(c => c.id !== convoId).sort((a,b) => b.timestamp.getTime() - a.timestamp.getTime());
+      setActiveConversationId(remainingConversations.length > 0 ? remainingConversations[0].id : null);
     }
     toast({title: "Conversation Deleted"});
   };
@@ -341,6 +361,41 @@ export default function ChatPage() {
     const parts: (string | JSX.Element)[] = [];
     let match;
   
+    // First, handle the AI message if it's explicitly a 'code' type from code generation
+    if (activeConversation?.messages[activeConversation.messages.length -1]?.type === 'code' && activeConversation?.messages[activeConversation.messages.length-1]?.data?.code) {
+      const codeMessage = activeConversation.messages[activeConversation.messages.length-1];
+      const language = getLanguageForHighlighting(codeMessage.data.language || defaultLang);
+      // Strip markdown backticks if present in the raw code
+      const rawCode = codeMessage.data.code.replace(/^```(\w+)?\n|```$/g, '');
+      try {
+        const highlightedCode = hljs.highlight(rawCode, { language, ignoreIllegals: true }).value;
+        return [ // Return as an array with a single element
+          <div key={`code-direct`} className="code-block relative bg-black/80 rounded-md shadow-inner my-1 w-full overflow-x-auto">
+            <div className="flex justify-between items-center px-3 py-1.5 bg-muted/30 border-b border-border/50 rounded-t-md">
+              <span className="text-xs text-muted-foreground capitalize">{language}</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(rawCode)}>
+                <Copy className="h-3.5 w-3.5" />
+                <span className="sr-only">Copy code</span>
+              </Button>
+            </div>
+            <ScrollArea className="max-h-[60vh] p-0">
+              <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
+                <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+              </pre>
+            </ScrollArea>
+          </div>
+        ];
+      } catch (error) {
+        console.error("Highlighting error for direct code:", error);
+        return [ // Return as an array with a single element
+          <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-1 overflow-x-auto">
+            <code>{rawCode}</code>
+          </pre>
+        ];
+      }
+    }
+    
+    // For other message types or text with embedded code blocks
     while ((match = codeBlockRegex.exec(text)) !== null) {
       const [fullMatch, lang, code] = match;
       const language = getLanguageForHighlighting(lang || defaultLang);
@@ -360,7 +415,7 @@ export default function ChatPage() {
                 <span className="sr-only">Copy code</span>
               </Button>
             </div>
-            <ScrollArea className="max-h-[400px] p-0">
+            <ScrollArea className="max-h-[60vh] p-0">
               <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
                 <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
               </pre>
@@ -382,38 +437,45 @@ export default function ChatPage() {
       parts.push(text.substring(lastIndex));
     }
     
-    if (parts.length === 0 && text) {
-        return [text];
-    }
-
-    return parts;
+    return parts.length > 0 ? parts : [text]; // Ensure it always returns an array, even if just with original text
   };
 
 
   const renderMessageContent = (message: Message) => {
+    if (message.type === 'code' && message.data?.code) { // Specifically for code generation output
+      const language = getLanguageForHighlighting(message.data.language);
+      // The code from 'code' type might already be just the raw code.
+      // If it's wrapped in markdown, hljs.highlight will handle it if language is not 'plaintext'.
+      // If it's raw code, it's fine.
+      const codeToHighlight = message.data.code.replace(/^```(\w+)?\n|```$/g, ''); // Ensure backticks are removed
+      
+      try {
+        const highlightedCode = hljs.highlight(codeToHighlight, { language, ignoreIllegals: true }).value;
+        return (
+          <div className="code-block relative bg-black/80 rounded-md shadow-inner my-1 w-full overflow-x-auto">
+            <div className="flex justify-between items-center px-3 py-1.5 bg-muted/30 border-b border-border/50 rounded-t-md">
+              <span className="text-xs text-muted-foreground capitalize">{language}</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(codeToHighlight)}>
+                <Copy className="h-3.5 w-3.5" />
+                <span className="sr-only">Copy code</span>
+              </Button>
+            </div>
+            <ScrollArea className="max-h-[60vh] p-0">
+              <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
+                <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+              </pre>
+            </ScrollArea>
+          </div>
+        );
+      } catch (e) {
+         console.error("Highlighting error for type 'code':", e);
+         return <pre className="p-3 m-0 whitespace-pre text-sm bg-muted/50 rounded-md my-1 overflow-x-auto"><code>{codeToHighlight}</code></pre>;
+      }
+    }
+    // For all other AI messages that might contain embedded code blocks
     if (message.sender === 'ai' && (message.type === 'text' || message.type === 'code_explanation' || message.type === 'url_analysis' || message.type === 'video_summary' || message.type === 'audio_transcription')) {
       const contentParts = parseAndHighlight(message.text, message.data?.language);
       return <div className="text-sm whitespace-pre-wrap leading-relaxed">{contentParts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>;
-    }
-    if (message.type === 'code' && message.data?.code) {
-      const language = getLanguageForHighlighting(message.data.language);
-      const highlightedCode = hljs.highlight(message.data.code, { language, ignoreIllegals: true }).value;
-      return (
-        <div className="code-block relative bg-black/80 rounded-md shadow-inner my-1 w-full overflow-x-auto">
-          <div className="flex justify-between items-center px-3 py-1.5 bg-muted/30 border-b border-border/50 rounded-t-md">
-            <span className="text-xs text-muted-foreground capitalize">{language}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(message.data.code)}>
-              <Copy className="h-3.5 w-3.5" />
-              <span className="sr-only">Copy code</span>
-            </Button>
-          </div>
-          <ScrollArea className="max-h-[60vh] p-0"> 
-            <pre className="p-3 m-0 whitespace-pre text-sm leading-relaxed">
-                <code className={`language-${language} hljs`} dangerouslySetInnerHTML={{ __html: highlightedCode }} />
-            </pre>
-          </ScrollArea>
-        </div>
-      );
     }
     if (message.type === 'image_analysis' && message.data?.imageUrl) {
       return (
@@ -427,36 +489,36 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] border border-border/50 rounded-lg overflow-hidden shadow-xl bg-muted/20"> {/* Main container with border & shadow */}
+    <div className="flex h-full border border-border/50 rounded-lg overflow-hidden shadow-xl bg-muted/20"> {/* Main container with border & shadow */}
       {/* Sidebar */}
       <div className={cn(
         "bg-background/80 backdrop-blur-sm transition-all duration-300 ease-in-out flex flex-col border-r border-border/50",
-        sidebarOpen ? "w-72 p-3" : "w-0 p-0 opacity-0 md:w-20 md:p-2 md:opacity-100"
+        sidebarOpen ? "w-64 p-2" : "w-0 p-0 opacity-0 md:w-16 md:p-1 md:opacity-100" // Adjusted widths
       )}>
         {sidebarOpen ? (
           <>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-lg font-orbitron text-primary">Conversations</h2>
-              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="md:hidden">
-                <SidebarClose className="h-5 w-5" />
+            <div className="flex justify-between items-center mb-2 p-1">
+              <h2 className="text-md font-orbitron text-primary">Conversations</h2>
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="md:hidden h-7 w-7">
+                <SidebarClose className="h-4 w-4" />
               </Button>
             </div>
             <Select onValueChange={(value) => handleStartNewConversation(value as AiFeature)}>
-              <SelectTrigger className="w-full h-10 mb-3 glassmorphic focus:ring-primary/50">
-                <Plus className="h-4 w-4 mr-2" /> New Chat
+              <SelectTrigger className="w-full h-9 mb-2 glassmorphic focus:ring-primary/50 text-xs">
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> New Chat
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(featureConfig).map(([key, { icon, name }]) => (
-                  <SelectItem key={key} value={key} className="text-sm">
-                    <div className="flex items-center gap-2">
-                      {React.cloneElement(icon, {className: "h-4 w-4"})} {name}
+                {Object.entries(featureConfig).map(([key, { icon: IconComponent, name }]) => (
+                  <SelectItem key={key} value={key} className="text-xs py-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <IconComponent className="h-3.5 w-3.5" /> {name}
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <ScrollArea className="flex-grow -mr-2 pr-2"> {/* Negative margin to hide scrollbar track */}
-              <div className="space-y-1.5">
+            <ScrollArea className="flex-grow -mr-1 pr-1">
+              <div className="space-y-1">
               {conversations.map(convo => (
                 <ConversationListItem
                   key={convo.id}
@@ -478,13 +540,13 @@ export default function ChatPage() {
             </ScrollArea>
           </>
         ) : ( 
-          <div className="flex flex-col items-center space-y-3 mt-1">
-             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} title="Open Sidebar">
-                <Menu className="h-5 w-5" />
+          <div className="flex flex-col items-center space-y-2 mt-1">
+             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} title="Open Sidebar" className="h-8 w-8">
+                <Menu className="h-4 w-4" />
               </Button>
-            {Object.entries(featureConfig).map(([key, { icon, name }]) => (
-                <Button key={key} variant="ghost" size="icon" onClick={() => handleStartNewConversation(key as AiFeature)} title={`New ${name} Chat`}>
-                    {React.cloneElement(icon, {className: "h-5 w-5"})}
+            {Object.entries(featureConfig).map(([key, { icon: IconComponent, name }]) => (
+                <Button key={key} variant="ghost" size="icon" onClick={() => handleStartNewConversation(key as AiFeature)} title={`New ${name} Chat`} className="h-8 w-8">
+                    <IconComponent className="h-4 w-4"/>
                 </Button>
             ))}
           </div>
@@ -493,25 +555,25 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-background overflow-hidden">
-        <header className="p-3 border-b border-border/50 flex items-center justify-between bg-muted/30">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className={cn(sidebarOpen && "md:hidden")}>
-                {sidebarOpen ? <CircleArrowLeft className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <header className="p-2 border-b border-border/50 flex items-center justify-between bg-muted/30 h-12 shrink-0">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)} className={cn(sidebarOpen && "md:hidden", "h-8 w-8")}>
+                {sidebarOpen ? <CircleArrowLeft className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </Button>
-          <div className="flex items-center gap-2">
-            {activeConversation && React.cloneElement(featureConfig[activeConversation.feature].icon, {className: "h-6 w-6 text-primary"})}
-            <h2 className="text-lg font-orbitron text-primary truncate">
+          <div className="flex items-center gap-1.5">
+            {activeConversation && <CurrentFeatureIcon className="h-5 w-5 text-primary" />}
+            <h2 className="text-md font-orbitron text-primary truncate">
               {activeConversation ? activeConversation.name : "ERIMTECH AI"}
             </h2>
           </div>
           <Select value={currentFeature} onValueChange={(value) => handleStartNewConversation(value as AiFeature)}>
-            <SelectTrigger className="w-auto md:w-[200px] h-9 text-xs glassmorphic focus:ring-primary/50">
-              <div className="flex items-center gap-1.5"> {React.cloneElement(currentFeatureDetails.icon, {className:"h-4 w-4"})} <span className="hidden md:inline">{currentFeatureDetails.name}</span></div>
+            <SelectTrigger className="w-auto md:w-[180px] h-8 text-xs glassmorphic focus:ring-primary/50 px-2">
+              <div className="flex items-center gap-1"> <CurrentFeatureIcon className="h-3.5 w-3.5"/> <span className="hidden md:inline truncate">{currentFeatureDetails.name}</span></div>
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(featureConfig).map(([key, { icon, name }]) => (
-                <SelectItem key={key} value={key} className="text-xs">
-                  <div className="flex items-center gap-2">
-                    {React.cloneElement(icon, {className: "h-4 w-4"})} {name}
+              {Object.entries(featureConfig).map(([key, { icon: IconComponent, name }]) => (
+                <SelectItem key={key} value={key} className="text-xs py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <IconComponent className="h-3.5 w-3.5"/> {name}
                   </div>
                 </SelectItem>
               ))}
@@ -519,87 +581,86 @@ export default function ChatPage() {
           </Select>
         </header>
 
-        <ScrollArea className="flex-grow p-4 space-y-4" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 p-3 space-y-3" ref={scrollAreaRef}> {/* Adjusted padding and spacing */}
           {(!activeConversation || activeConversation.messages.length === 0) && !isLoading && (
-             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-8 bg-muted/50 rounded-full mb-6 animate-pulse">
-                <Bot className="h-20 w-20 text-primary" />
+             <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <div className="p-6 bg-muted/50 rounded-full mb-4 animate-pulse">
+                <Bot className="h-16 w-16 text-primary" />
               </div>
-              <h2 className="text-2xl font-orbitron mb-2">Welcome to ERIMTECH AI</h2>
-              <p className="text-muted-foreground max-w-md">
+              <h2 className="text-xl font-orbitron mb-1.5">Welcome to ERIMTECH AI</h2>
+              <p className="text-muted-foreground text-sm max-w-sm">
                 Select a feature or start a new chat from the sidebar to begin. 
-                Your journey into advanced AI starts now.
               </p>
             </div>
           )}
           {activeConversation?.messages.map(message => (
-            <div key={message.id} className={`flex flex-col mb-3 items-stretch ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
+            <div key={message.id} className={`flex flex-col mb-2 items-stretch ${message.sender === 'user' ? 'items-end' : 'items-start'}`}>
               <div className={cn(
-                  "flex items-start gap-2.5 w-full",
+                  "flex items-start gap-2 w-full", // Reduced gap
                   message.sender === 'user' ? 'justify-end' : 'justify-start'
                 )}>
                 {message.sender === 'ai' && (
-                  <Avatar className="h-8 w-8 shrink-0">
+                  <Avatar className="h-7 w-7 shrink-0"> {/* Smaller avatar */}
                     <AvatarImage src="/logo.svg" alt="AI Avatar" />
-                    <AvatarFallback><Bot className="h-5 w-5"/></AvatarFallback>
+                    <AvatarFallback><Bot className="h-4 w-4"/></AvatarFallback>
                   </Avatar>
                 )}
                 <div 
                   className={cn(
-                    "p-3 rounded-xl shadow-md relative max-w-[90%] md:max-w-[80%] overflow-hidden", // Added overflow-hidden
+                    "p-2.5 rounded-lg shadow-md relative max-w-[85%] md:max-w-[75%] overflow-hidden", // Reduced padding, max-width
                     message.sender === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted text-foreground rounded-bl-none',
-                    (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' ) ? 'w-full sm:w-auto' : 'w-auto' // Full width for code/image on small, auto on larger
+                     (message.type === 'code' || (message.text && message.text.includes("```")) || message.type === 'image_analysis' ) ? 'w-full break-words' : 'w-auto' // Full width for code/image, break-words for better wrapping
                   )}
                 >
-                  {message.type === 'error' && <AlertTriangle className="h-5 w-5 text-destructive inline mr-1 mb-0.5" />}
+                  {message.type === 'error' && <AlertTriangle className="h-4 w-4 text-destructive inline mr-1 mb-0.5" />}
                   {renderMessageContent(message)}
-                  <p className="text-xs text-muted-foreground/70 mt-1.5 text-right">
+                  <p className="text-xs text-muted-foreground/70 mt-1 text-right"> {/* Reduced margin */}
                     {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 {message.sender === 'user' && (
-                  <Avatar className="h-8 w-8 shrink-0">
+                  <Avatar className="h-7 w-7 shrink-0"> {/* Smaller avatar */}
                     <AvatarImage src="" alt="User Avatar"/>
-                    <AvatarFallback><User className="h-5 w-5"/></AvatarFallback>
+                    <AvatarFallback><User className="h-4 w-4"/></AvatarFallback>
                   </Avatar>
                 )}
               </div>
             </div>
           ))}
           {isLoading && activeConversationId && (
-            <div className="flex items-start gap-2.5 max-w-[90%] md:max-w-[80%]">
-              <Avatar className="h-8 w-8 shrink-0">
+            <div className="flex items-start gap-2 max-w-[85%] md:max-w-[75%]">
+              <Avatar className="h-7 w-7 shrink-0">
                 <AvatarImage src="/logo.svg" alt="AI Avatar" />
-                <AvatarFallback><Bot className="h-5 w-5"/></AvatarFallback>
+                <AvatarFallback><Bot className="h-4 w-4"/></AvatarFallback>
               </Avatar>
-              <div className="p-3 rounded-xl shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">ERIMTECH AI is thinking...</p>
+              <div className="p-2.5 rounded-lg shadow-md bg-muted text-foreground rounded-bl-none flex items-center space-x-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                <p className="text-xs text-muted-foreground">ERIMTECH AI is thinking...</p> {/* Smaller text */}
               </div>
             </div>
           )}
         </ScrollArea>
 
-        <footer className="p-3 border-t border-border/50 bg-muted/30">
-          <form onSubmit={handleSubmit} className="space-y-2">
+        <footer className="p-2 border-t border-border/50 bg-muted/30 shrink-0"> {/* Reduced padding */}
+          <form onSubmit={handleSubmit} className="space-y-1.5"> {/* Reduced spacing */}
             {currentFeatureDetails.requiresCodeInput && (
-              <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+              <div className="grid grid-cols-[1fr_auto] gap-1.5 items-end">
                 <Textarea
                   id="codeInput"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="min-h-[80px] max-h-[200px] text-sm glassmorphic focus:ring-primary/50 resize-y"
+                  className="min-h-[60px] max-h-[150px] text-xs glassmorphic focus:ring-primary/50 resize-y py-1.5 px-2" // Adjusted size and padding
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
                 <Select value={codeLanguage} onValueChange={setCodeLanguage} disabled={isLoading || !activeConversationId}>
-                  <SelectTrigger className="w-auto md:w-[140px] h-10 text-xs glassmorphic focus:ring-primary/50">
-                    <Code className="h-3.5 w-3.5 mr-1 text-muted-foreground" /> <span className="truncate">{codeLanguage}</span>
+                  <SelectTrigger className="w-auto md:w-[120px] h-9 text-xs glassmorphic focus:ring-primary/50 px-2"> {/* Adjusted height and padding */}
+                    <Code className="h-3 w-3 mr-1 text-muted-foreground" /> <span className="truncate">{codeLanguage}</span>
                   </SelectTrigger>
                   <SelectContent>
                     {['javascript', 'python', 'java', 'csharp', 'cpp', 'php', 'ruby', 'go', 'swift', 'typescript', 'html', 'css', 'json', 'bash', 'shell', 'plaintext', 'other'].map(lang => (
-                      <SelectItem key={lang} value={lang} className="text-xs">{lang}</SelectItem>
+                      <SelectItem key={lang} value={lang} className="text-xs py-1">{lang}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -613,17 +674,17 @@ export default function ChatPage() {
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
                     placeholder={currentFeature === 'chat' ? "Optional: Enter URL for context..." : currentFeatureDetails.placeholder}
-                    className="h-10 text-sm glassmorphic focus:ring-primary/50"
+                    className="h-9 text-xs glassmorphic focus:ring-primary/50 px-2" // Adjusted height and padding
                     disabled={isLoading || !activeConversationId}
                 />
             )}
             
-            <div className="flex items-end space-x-2"> {/* Changed to items-end for better alignment with Textarea */}
+            <div className="flex items-end space-x-1.5"> {/* Reduced spacing */}
               {currentFeatureDetails.requiresFileUpload && (
                 <>
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept={currentFeature === 'image_analysis' ? 'image/*' : (currentFeature === 'audio_transcription' ? 'audio/*' : '*/*')} disabled={!activeConversationId} />
-                  <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-10 w-10 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
-                    <Paperclip className="h-4 w-4" />
+                  <Button type="button" variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isLoading || !activeConversationId} className="h-9 w-9 glassmorphic focus:ring-primary/50 hover:bg-primary/10">
+                    <Paperclip className="h-3.5 w-3.5" />
                     <span className="sr-only">Attach file</span>
                   </Button>
                 </>
@@ -634,7 +695,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow min-h-[40px] max-h-[150px] text-sm glassmorphic focus:ring-primary/50 resize-y"
+                  className="flex-grow min-h-[36px] max-h-[120px] text-xs glassmorphic focus:ring-primary/50 resize-y py-1.5 px-2" // Adjusted sizes and padding
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -645,7 +706,7 @@ export default function ChatPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={currentFeatureDetails.placeholder}
-                  className="flex-grow h-10 text-sm glassmorphic focus:ring-primary/50"
+                  className="flex-grow h-9 text-xs glassmorphic focus:ring-primary/50 px-2" // Adjusted height and padding
                   disabled={isLoading || !activeConversationId}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                 />
@@ -656,22 +717,23 @@ export default function ChatPage() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Add a comment or specific instructions..."
-                      className="flex-grow h-10 text-sm glassmorphic focus:ring-primary/50"
+                      className="flex-grow h-9 text-xs glassmorphic focus:ring-primary/50 px-2" // Adjusted height and padding
                       disabled={isLoading || !activeConversationId}
                       onKeyDown={(e) => { if (e.key === 'Enter' && !isLoading) { e.preventDefault(); handleSubmit(e);}}}
                   />
               )}
 
 
-              <Button type="submit" size="icon" disabled={isLoading || (!input && !file && !urlInput && !codeInput) || !activeConversationId} className="h-10 w-10 bg-primary hover:bg-primary/90 disabled:bg-muted">
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <Button type="submit" size="icon" disabled={isLoading || (!input && !file && !urlInput && !codeInput) || !activeConversationId} className="h-9 w-9 bg-primary hover:bg-primary/90 disabled:bg-muted">
+                {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 <span className="sr-only">Send</span>
               </Button>
             </div>
-            {file && <p className="text-xs text-muted-foreground pt-1">Selected: {file.name}</p>}
+            {file && <p className="text-xs text-muted-foreground pt-0.5">Selected: {file.name}</p>} {/* Reduced padding */}
           </form>
         </footer>
       </div>
     </div>
   );
 }
+

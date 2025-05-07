@@ -1,5 +1,7 @@
+
 "use client";
 
+import React from 'react';
 import { Inter, Orbitron } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/providers/theme-provider';
@@ -19,21 +21,15 @@ const orbitron = Orbitron({
   variable: '--font-orbitron',
 });
 
-// If metadata is needed for this Client Component layout,
-// it should be exported from a separate metadata.ts file or a parent Server Component.
-// For example, you might have a src/app/metadata.ts and then import it in a Server Component parent.
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Removed isClient state and useEffect logic.
-  // Providers are now rendered directly. This assumes ThemeProvider and AuthProvider
-  // are SSR-compatible or handle client-side only logic internally.
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${orbitron.variable} font-sans antialiased flex flex-col min-h-screen`}>
+      <body className={`${inter.variable} ${orbitron.variable} font-sans antialiased flex flex-col h-screen max-h-screen overflow-hidden`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -41,9 +37,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="flex flex-col min-h-screen">
+            <div className="flex flex-col h-full">
               <SiteHeader />
-              <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+              <main className="flex-1 container mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3 overflow-y-auto"> {/* Reduced padding, adjusted overflow */}
                 {children}
               </main>
               <SiteFooter />
@@ -55,3 +51,4 @@ export default function RootLayout({
     </html>
   );
 }
+
